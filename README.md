@@ -60,16 +60,39 @@ D5  F1
 
 ## INCH options
 
-The only required input to INCH is a VCF file. Users must specify one of the
-three following flags:
-- `--pca NUM`: compute NUM number of PCs for the given founders. The `-o` option
-  must also be used; eigenvalue, eigenvector, and image files will be written
-  using that prefix.
-- `--matrix`: compute a distance matrix for the given founders
-- `-d FILE`, `--descendents FILE`: match descendents to founders
+The only required input to INCH is a VCF file. Users must specify exactly one of
+the three following flags:
+- `-p NUM`, `--pca NUM`: compute NUM number of PCs for the given founders. The 
+  `-o` option must also be used; eigenvalue, eigenvector, and image files will
+  be written using that prefix. Default NUM is 5.
+- `-m`, `--matrix`: compute a distance matrix for the given founders.
+- `-d FILE`, `--descendents FILE`: match descendents to founders.
 
 Users may additionally specify the options below:
 - `-c CHR`, `--chr CHR`: select only data for a specific chromosome. By default,
 assumes all data is from the same chromosome.
 - `-o FILE`, `--output FILE`: Write output to file. By default, output is
   written to stdout.
+- `-g GROUPS`, `--groups GROUPS`: group multiple founders together. The format
+  is `F1,F2 F3,F4,F5` - note the commas separating founders within a group and
+  the whitespace separating groups. Any founders not mentioned will be put in a
+  group by themselves.
+  - If used with the `-d` flag, a descendent will be assigned to the group
+    containing the founder it matches best.
+  - If used with the `-m` flag, average distances between the members of each 
+    group will be computed.
+
+## File format
+
+The format for the `-d` option is a two-column tab-separated file without a
+header line. The first column is descendent IDs and the second is the ID of the
+founder it matches best.
+
+## Contributors
+
+This project was entirely coded by Faith Okamoto, with some idea generation by
+other members of the Palmer Lab. (Notably Thiago Sanches)
+
+## Testing
+
+To run tests (no tests right now)
