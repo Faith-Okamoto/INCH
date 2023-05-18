@@ -14,13 +14,14 @@ Installation requires the (?) libraries to be installed. You can install these
 with `pip`:
 
 ```
-pip install pyfaidx pysam
+pip install pandas sklearn
 ```
 
 Once required libraries are installed, you can install INCH with the following
 command:
 
 ```
+python3 setup.py build
 python3 setup.py install
 ```
 
@@ -28,7 +29,7 @@ Note: if you do not have root access, you can run the commands above with
 additional options to install locally:
 
 ```
-pip install --user <libraries>
+pip install --user pandas sklearn
 python3 setup.py install --user
 ```
 
@@ -40,13 +41,13 @@ message.
 The basic usage of INCH is:
 
 ```
-inch [other options] [-c CHR] [--pca/--matrix/-d descendents.vcf] founders.vcf
+inch [other options] [--pca/--matrix/-d descendents.vcf] founders.vcf
 ```
 
 To run INCH on a small test example (using files in this repo):
 
 ```
-inch -c Y -d example-files/descendents.vcf example-files/founders.vcf
+inch -d example-files/descendents.vcf example-files/founders.vcf
 ```
 
 This should produce the output below:
@@ -91,7 +92,7 @@ founder it matches best.
 ## Contributors
 
 This project was entirely coded by Faith Okamoto, with some idea generation by
-other members of the Palmer Lab. (Notably Thiago Sanches)
+other members of the Palmer Lab. (Notably Thiago Sanches.)
 
 ## Testing
 
