@@ -43,9 +43,6 @@ def main():
 
 	if sum(map(bool, [args.pca is not None, args.matrix, args.descendents])) != 1:
 		myutils.ERROR("Please specify exactly one of --pca, --matrix, or --descendents.")
-	
-	if args.pca is not None and args.out is None:
-		myutils.ERROR("The --pca option must be used with --out.")
 
 	if not os.path.exists(args.founders):
 		myutils.ERROR("{founders} does not exist".format(founders=args.founders))
@@ -55,6 +52,12 @@ def main():
 	
 	if args.out is not None and not os.path.exists(os.path.dirname(args.out)):
 		myutils.ERROR("Directory for {out} does not exist".format(out=args.out))
+
+	if args.groups is not None and args.pca is not None:
+		myutils.ERROR("Groups cannot be used in conjuction with PCA analysis")
+	
+	if args.groups is not None:
+		myutils.ERROR("Not yet implemented")
 	
 	# Set up output file
 	if args.out is None:
@@ -62,11 +65,15 @@ def main():
 	else: outf = open(args.out, "w")
 	
 	if args.matrix:
-		founders = myutils.extract_genotypes_vcf(args.founders, args.chr)[0]
+		founders = myutils.extract_genotypes(args.founders, args.chr)[0]
 		outf.write(str(myutils.dist_matrix(founders, None)))
-	if args.descendents:
+	if args.descendents is not None:
 		outf.write(myutils.identify_founders(
 			args.founders, args.descendents, args.chr).to_string())
+	if args.pca is not None:
+		evectors, evalues = myutils.pca(args.founders, args.chr, args.pca)
+		outf.write(' '.join(str(round(eval, ndigits = 4)) for eval in evalues))
+		outf.write("\n" + str(evectors))
 	outf.close()
 	sys.exit(0)
 

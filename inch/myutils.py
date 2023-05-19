@@ -1,6 +1,7 @@
 import sys
 import pandas as pd
 from sklearn.metrics import pairwise_distances
+from sklearn.decomposition import PCA
 import gzip
 # error handling code from https://github.com/gymreklab/cse185-demo-project/blob/main/mypileup/myutils.py
 
@@ -32,8 +33,8 @@ def ERROR(msg):
     sys.exit(1)
 
 def identify_founders(founders, desc, chr):
-    founders, founder_pos, founder_chr = extract_genotypes_vcf(founders, chr)
-    desc, desc_pos, desc_chr = extract_genotypes_vcf(desc, chr)
+    founders, founder_pos, founder_chr = extract_genotypes(founders, chr)
+    desc, desc_pos, desc_chr = extract_genotypes(desc, chr)
     if desc_chr != founder_chr:
         ERROR("Founder and descendents have different chromosomes")
     if not set(founder_pos).intersection(set(desc_pos)):
@@ -55,18 +56,12 @@ def dist_matrix(founders, desc):
     matrix.index = founder_ids
     return matrix
 
-def is_gz_file(filename):
-    with open(filename, 'rb') as test_f:
+def is_gz_file(file):
+    with open(file, 'rb') as test_f:
         return test_f.read(2) == b'\x1f\x8b'
 
-def open_vcf(filename):
-    if is_gz_file(filename):
-        return gzip.open(filename, "rt")
-    else:
-        return open(filename, "rt")
-
-def get_vcf_names(filename):
-    ifile = open_vcf(filename)
+def get_vcf_names(file):
+    ifile = gzip.open(file, "rt") if is_gz_file(file) else open(file, "rt")
     names = None
     for line in ifile:
         if line.startswith("#CHROM"):
@@ -74,12 +69,12 @@ def get_vcf_names(filename):
             break
     ifile.close()
     if names is None:
-        ERROR("VCF file {file} has no header line".format(file=filename))
+        ERROR("VCF file {name} has no header line".format(name=file))
     return names
 
-def load_vcf(filename, chr):
-    vcf = pd.read_csv(filename, comment='#', delim_whitespace = True, 
-                      header = None, names = get_vcf_names(filename))
+def load_vcf(file, chr):
+    vcf = pd.read_csv(file, comment='#', delim_whitespace = True, 
+                      header = None, names = get_vcf_names(file))
     if vcf.columns[:9].tolist() != STANDARD_VCF_COLS:
         ERROR("VCF column names are malformed")
     if chr is None and vcf['#CHROM'].nunique() > 1:
@@ -87,10 +82,10 @@ def load_vcf(filename, chr):
     if chr is not None:
         vcf = vcf[vcf['#CHROM'] == chr]
         if vcf.shape[0] == 0:
-            ERROR("No variants on chromosome {chr}".format(chr = chr))
+            ERROR("No variants on chromosome {chr}".format(chr=chr))
     return vcf
 
-def extract_genotypes_vcf(filename, chr):
+def extract_genotypes(filename, chr):
     vcf = load_vcf(filename, chr)
     if not (vcf["FORMAT"].str.split(':').str[0] == "GT").all():
         ERROR("GT is not the first FORMAT field for all positions")
@@ -115,6 +110,18 @@ def extract_genotypes_vcf(filename, chr):
         print("Non haploid genotypes detected in {file}. First allele used.".format(file = filename))
 
     return vcf.loc[:, samples.tolist()], vcf["POS"], vcf["#CHROM"][0]
+
+def pca(file, chr, ncomp):
+    geno = extract_genotypes(file, chr)[0]
+    samples = geno.columns
+    geno = geno.transpose()
+    pca = PCA(n_components=ncomp)
+    pca.fit(geno)
+    eigenvec = pd.DataFrame(pca.transform(geno))
+    eigenvec.columns = ["PC" + str(i + 1) for i in range(ncomp)]
+    eigenvec.index = samples
+    return eigenvec, pca.explained_variance_
     
 if __name__ == "__main__":
-    print(identify_founders("example-files/founders.vcf", "example-files/descendents.vcf", None).to_string())
+    evectors, evalues = pca("example-files/descendents.vcf", None, 2)
+    print(str(evectors))
