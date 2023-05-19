@@ -54,18 +54,19 @@ def main():
 		myutils.ERROR("{desc} does not exist".format(desc=args.descendents))
 	
 	if args.out is not None and not os.path.exists(os.path.dirname(args.out)):
-		myutils.ERROR("Directory for {out} doe not exist".format(out=args.out))
+		myutils.ERROR("Directory for {out} does not exist".format(out=args.out))
 	
 	# Set up output file
 	if args.out is None:
 		outf = sys.stdout
 	else: outf = open(args.out, "w")
-
-	print(args.founders)
 	
 	if args.matrix:
-		myutils.dist_matrix(args.founders, args.descendents, outf)
-	# Peform computation
+		founders = myutils.extract_genotypes_vcf(args.founders, args.chr)[0]
+		outf.write(str(myutils.dist_matrix(founders, None)))
+	if args.descendents:
+		outf.write(myutils.identify_founders(
+			args.founders, args.descendents, args.chr).to_string())
 	outf.close()
 	sys.exit(0)
 

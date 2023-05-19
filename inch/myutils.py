@@ -31,14 +31,29 @@ def ERROR(msg):
     sys.stderr.write(bcolors.FAIL + "[ERROR]: " + bcolors.ENDC + "{msg}\n".format(msg=msg) )
     sys.exit(1)
 
-def dist_matrix(founders, desc, outf, chr):
-    founders, pos = extract_genotypes_vcf(founders, chr)
-    samples = founders.columns.tolist()
+def identify_founders(founders, desc, chr):
+    founders, founder_pos, founder_chr = extract_genotypes_vcf(founders, chr)
+    desc, desc_pos, desc_chr = extract_genotypes_vcf(desc, chr)
+    if desc_chr != founder_chr:
+        ERROR("Founder and descendents have different chromosomes")
+    if not set(founder_pos).intersection(set(desc_pos)):
+        ERROR("Founders and descendents share no positions")
+    founders = founders[founder_pos.isin(desc_pos)]
+    desc = desc[desc_pos.isin(founder_pos)]
+    matrix = dist_matrix(founders, desc).transpose()
+    return matrix.idxmin(axis=1)
+
+def dist_matrix(founders, desc):
+    founder_ids = founders.columns.tolist()
     founders = founders.transpose()
+    if desc is not None:
+        desc_ids = desc.columns.tolist()
+        desc = desc.transpose()
     matrix = pairwise_distances(founders, desc, metric="hamming")
-    matrix = pd.DataFrame(matrix, columns = samples)
-    matrix.index = samples
-    outf.write(str(matrix))
+    matrix = pd.DataFrame(matrix)
+    matrix.columns = founder_ids if desc is None else desc_ids
+    matrix.index = founder_ids
+    return matrix
 
 def is_gz_file(filename):
     with open(filename, 'rb') as test_f:
@@ -97,9 +112,9 @@ def extract_genotypes_vcf(filename, chr):
             geno = geno.str.split('|').str[0].str.split('/').str[0]
         vcf[sample] = [get_allele(i, geno[i]) for i in range(vcf.shape[0])]
     if non_haploid:
-        print("Non haploid genotypes detected. First allele used.")
+        print("Non haploid genotypes detected in {file}. First allele used.".format(file = filename))
 
-    return vcf.loc[:, samples.tolist()], vcf["POS"]
+    return vcf.loc[:, samples.tolist()], vcf["POS"], vcf["#CHROM"][0]
     
 if __name__ == "__main__":
-    dist_matrix("example-files/descendents.vcf", None, sys.stdout, None)
+    print(identify_founders("example-files/founders.vcf", "example-files/descendents.vcf", None).to_string())
