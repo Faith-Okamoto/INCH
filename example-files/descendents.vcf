@@ -4,6 +4,6 @@
 ##FILTER=<ID=s50,Description="Less than 50% of samples have data">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 #CHROM  POS ID  REF ALT QUAL    FILTER  INFO    FORMAT D1   D2  D3  D4  D5
-Y   1   .   A   T   20  PASS    AF=0.4  GT  0|0 1|1 0|0 1|1 0|0
+Y   1   .   A   T   20  PASS    AF=0.4  GT  0|0 1|1 .|. 1|1 0|0
 Y   2   .   C   G   20  PASS    AF=0.2  GT  0|0 1|1 0|0 0|0 0|0
 Y   3   .   G   A   20  PASS    AF=0.6  GT  0|0 1|1 0|0 1|1 1|1

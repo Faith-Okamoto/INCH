@@ -11,10 +11,13 @@ import os
 import sys
 
 def main():
+	print("bo")
 	parser = argparse.ArgumentParser(
 		prog="inch",
 		description="Command-line script to categorize samples as a haplotype"
 	)
+
+	print("test")
 
 	# Input
 	parser.add_argument("founders", help="VCF with founder genotypes", 
@@ -40,6 +43,7 @@ def main():
 
 	# Parse args
 	args = parser.parse_args()
+	print(args.matrix)
 
 	if sum(map(bool, [args.pca is not None, args.matrix, args.descendents])) != 1:
 		myutils.ERROR("Please specify exactly one of --pca, --matrix, or --descendents.")
@@ -51,10 +55,7 @@ def main():
 		myutils.ERROR("{founders} does not exist".format(founders=args.founders))
 	
 	if args.descendents is not None and not os.path.exists(args.descendents):
-		myutils.ERROR("{desc} does not exist".format(desc=args.descendents))
-	
-	if args.out is not None and not os.path.exists(os.path.dirname(args.out)):
-		myutils.ERROR("Directory for {out} doe not exist".format(out=args.out))
+		myutils.ERROR("{descendents} does not exist".format(descendents=args.descendents))
 	
 	# Set up output file
 	if args.out is None:
@@ -65,6 +66,7 @@ def main():
 	
 	if args.matrix:
 		myutils.dist_matrix(args.founders, args.descendents, outf)
+		print("ha")
 	# Peform computation
 	outf.close()
 	sys.exit(0)
