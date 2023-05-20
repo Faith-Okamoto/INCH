@@ -2,6 +2,7 @@ import sys
 import pandas as pd
 from sklearn.metrics import pairwise_distances
 from sklearn.decomposition import PCA
+from itertools import chain
 import gzip
 # error handling code from https://github.com/gymreklab/cse185-demo-project/blob/main/mypileup/myutils.py
 
@@ -32,8 +33,25 @@ def ERROR(msg):
     sys.stderr.write(bcolors.FAIL + "[ERROR]: " + bcolors.ENDC + "{msg}\n".format(msg=msg) )
     sys.exit(1)
 
-def identify_founders(founders, desc, chr):
+def make_groups(founder_ids, groups):
+    if groups is None:
+        return None
+    groups = [group.split(",") for group in groups]
+    if not all([set(group).issubset(founder_ids) for group in groups]):
+        ERROR("Some groups contain nonexistant founder IDs")
+    flat_groups = list(chain.from_iterable(groups))
+    if len(flat_groups) != len(set(flat_groups)):
+        ERROR("Some groups contain duplicate founder IDs")
+    for id in founder_ids:
+        if id not in flat_groups:
+            groups.append([id])
+    return groups
+
+def identify_founders(founders, desc, chr, groups):
     founders, founder_pos, founder_chr = extract_genotypes(founders, chr)
+    if groups is not None:
+        groups = make_groups(set(founders.columns), groups)
+        groups = {id : ",".join(group) for group in groups for id in group}
     desc, desc_pos, desc_chr = extract_genotypes(desc, chr)
     if desc_chr != founder_chr:
         ERROR("Founder and descendents have different chromosomes")
@@ -41,20 +59,28 @@ def identify_founders(founders, desc, chr):
         ERROR("Founders and descendents share no positions")
     founders = founders[founder_pos.isin(desc_pos)]
     desc = desc[desc_pos.isin(founder_pos)]
-    matrix = dist_matrix(founders, desc).transpose()
-    return matrix.idxmin(axis=1)
+    matrix = dist_matrix(founders, desc, None).transpose()
+    matches = matrix.idxmin(axis=1)
+    return matches if groups is None else matches.replace(groups)
 
-def dist_matrix(founders, desc):
+def dist_matrix(founders, desc, groups):
+    groups = make_groups(set(founders.columns), groups)
     founder_ids = founders.columns.tolist()
     founders = founders.transpose()
     if desc is not None:
         desc_ids = desc.columns.tolist()
         desc = desc.transpose()
     matrix = pairwise_distances(founders, desc, metric="hamming")
-    matrix = pd.DataFrame(matrix)
-    matrix.columns = founder_ids if desc is None else desc_ids
-    matrix.index = founder_ids
-    return matrix
+    matrix = pd.DataFrame(matrix, index = founder_ids,
+                          columns = founder_ids if desc is None else desc_ids)
+    return matrix if groups is None else merge_groups(matrix, groups)
+
+def merge_groups(matrix, groups):
+    groups = {",".join(group) : group for group in groups}
+    merged = pd.DataFrame(0, index = groups.keys(), columns = groups.keys())
+    def dist(row, col):
+        return 0 if row == col else matrix.loc[groups[row]][groups[col]].mean(axis=None)
+    return merged.apply(lambda x: [dist(row, x.name) for row in x.index])
 
 def is_gz_file(file):
     with open(file, 'rb') as test_f:
@@ -85,8 +111,8 @@ def load_vcf(file, chr):
             ERROR("No variants on chromosome {chr}".format(chr=chr))
     return vcf
 
-def extract_genotypes(filename, chr):
-    vcf = load_vcf(filename, chr)
+def extract_genotypes(file, chr):
+    vcf = load_vcf(file, chr)
     if not (vcf["FORMAT"].str.split(':').str[0] == "GT").all():
         ERROR("GT is not the first FORMAT field for all positions")
     samples = vcf.columns[9:]
@@ -107,7 +133,7 @@ def extract_genotypes(filename, chr):
             geno = geno.str.split('|').str[0].str.split('/').str[0]
         vcf[sample] = [get_allele(i, geno[i]) for i in range(vcf.shape[0])]
     if non_haploid:
-        print("Non haploid genotypes detected in {file}. First allele used.".format(file = filename))
+        sys.stderr.write("Non haploid genotypes detected in {file}. First allele used.".format(file = file))
 
     return vcf.loc[:, samples.tolist()], vcf["POS"], vcf["#CHROM"][0]
 
@@ -121,7 +147,3 @@ def pca(file, chr, ncomp):
     eigenvec.columns = ["PC" + str(i + 1) for i in range(ncomp)]
     eigenvec.index = samples
     return eigenvec, pca.explained_variance_
-    
-if __name__ == "__main__":
-    evectors, evalues = pca("example-files/descendents.vcf", None, 2)
-    print(str(evectors))

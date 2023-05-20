@@ -56,9 +56,6 @@ def main():
 	if args.groups is not None and args.pca is not None:
 		myutils.ERROR("Groups cannot be used in conjuction with PCA analysis")
 	
-	if args.groups is not None:
-		myutils.ERROR("Not yet implemented")
-	
 	# Set up output file
 	if args.out is None:
 		outf = sys.stdout
@@ -66,10 +63,10 @@ def main():
 	
 	if args.matrix:
 		founders = myutils.extract_genotypes(args.founders, args.chr)[0]
-		outf.write(str(myutils.dist_matrix(founders, None)))
+		outf.write(str(myutils.dist_matrix(founders, None, args.groups)))
 	if args.descendents is not None:
 		outf.write(myutils.identify_founders(
-			args.founders, args.descendents, args.chr).to_string())
+			args.founders, args.descendents, args.chr, args.groups).to_string())
 	if args.pca is not None:
 		evectors, evalues = myutils.pca(args.founders, args.chr, args.pca)
 		outf.write(' '.join(str(round(eval, ndigits = 4)) for eval in evalues))
