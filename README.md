@@ -42,7 +42,7 @@ message.
 The basic usage of INCH is:
 
 ```
-inch [other options] {--pca|--matrix|--descendents descendents.vcf} founders.vcf
+inch [other options] {--pca 5|--matrix|--descendents descendents.vcf} founders.vcf
 ```
 
 To run INCH on a small test example (using files in this repo):
