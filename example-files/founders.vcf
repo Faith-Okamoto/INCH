@@ -5,6 +5,6 @@
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 #CHROM  POS ID  REF ALT QUAL    FILTER  INFO    FORMAT F1   F2
 Y   1   .   A   T   20  PASS    AF=0.5  GT  0|0 1|1
-Y   2   .   C   G   20  PASS    AF=0.5  GT  0|0 1|1
+Y   2   .   CC   G   20  PASS    AF=0.5  GT  0|0 1|1
 Y   3   .   G   A   20  PASS    AF=0.5  GT  0|0 1|1
 Y   4   .   T   G   20  PASS    AF=0.5  GT  0|0 1|1

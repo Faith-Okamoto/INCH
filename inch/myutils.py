@@ -111,27 +111,37 @@ def load_vcf(file, chr):
             ERROR("No variants on chromosome {chr}".format(chr=chr))
     return vcf
 
+def to_code(geno):
+    if geno == "*":
+        return -1
+    code = 0
+    for base in geno:
+        if base not in BASES:
+            ERROR("Invalid base {base} in REF or ALT alleles".format(base))
+        code *= len(BASES)
+        code += BASES[base]
+    return code
+
 def extract_genotypes(file, chr):
     vcf = load_vcf(file, chr)
     if not (vcf["FORMAT"].str.split(':').str[0] == "GT").all():
         ERROR("GT is not the first FORMAT field for all positions")
     samples = vcf.columns[9:]
     alleles = (vcf["REF"] + "," + vcf["ALT"]).str.split(",")
-    if not all([set(row).issubset(BASES.keys()) for row in alleles]):
-        ERROR("Invalid base in REF or ALT alleles")
+    alleles = [[to_code(geno) for geno in row] for row in alleles]
 
-    def get_allele(row, geno):
-        if geno != "." and not geno.isdigit():
-            ERROR("Invalid genotype code: " + geno)
-        return -1 if geno == "." else BASES[alleles[row][int(geno)]]
+    def get_geno_code(row, col, geno):
+        if geno != "." and geno != "*" and not geno.isdigit():
+            ERROR("Invalid genotype code: " + geno)       
+        return -1 - col if geno == "." else alleles[row][int(geno)]
     
     non_haploid = False
-    for sample in samples:
-        geno = vcf[sample].str.split(':').str[0]
+    for col in range(9, vcf.shape[1]):
+        geno = vcf.iloc[:, col].str.split(':').str[0]
         if geno.str.contains('|').any() or geno.str.contains('/').any():
             non_haploid = True
             geno = geno.str.split('|').str[0].str.split('/').str[0]
-        vcf[sample] = [get_allele(i, geno[i]) for i in range(vcf.shape[0])]
+        vcf.iloc[:, col] = [get_geno_code(row, col, geno[row]) for row in range(vcf.shape[0])]
     if non_haploid:
         sys.stderr.write("Non haploid genotypes detected in {file}. First allele used.".format(file = file))
 
