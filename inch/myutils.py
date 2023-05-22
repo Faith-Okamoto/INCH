@@ -25,7 +25,7 @@ STANDARD_VCF_COLS = ['#CHROM', 'POS', 'ID', 'REF', 'ALT',
 # a nonintuitive name for the chromosome column; artifact of how file is read
 CHR_COL = STANDARD_VCF_COLS[0]
 # a simple encoding of DNA bases to numbers
-BASES = {'A' : 0, 'C': 1, 'G': 2, 'T': 3}
+BASES = {'A' : 1, 'C': 2, 'G': 3, 'T': 4}
 
 def ERROR(msg):
     """
@@ -153,7 +153,7 @@ def _make_groups(founder_ids: set[str], groups: list[str]) -> list[list[str]]:
     founder_ids : set[str]
         All founder IDs
     groups : list[str]
-        Founders to group together.
+        Founders to group together. Must not be None.
         Each list item is a group; IDs with a group are comma-separated.
     
     Returns
@@ -212,7 +212,7 @@ def _merge_matrix_groups(matrix: pd.DataFrame,
     matrix : pd.DataFrame
         n x n matrix (labeled) of Hamming distances between founders
     groups : list[list[str]]
-        Sublists are groups and sublist items are founder IDs. 
+        Sublists are groups and sublist items are founder IDs. Must not be None.
         All IDs are in exactly one group.
     
     Returns
@@ -340,12 +340,12 @@ def _to_code(geno: str) -> int:
     # missingness due to an upstream deletion
     if geno == '*':
         return -1
-    # build up numeric code for allele as if ACGT is 0123 in base-4
+    # build up numeric code for allele as if ACGT is 1234 in base-5
     code = 0
     for base in geno:
         if base not in BASES:
             ERROR('Invalid base {base} in REF or ALT'.format(base = base))
-        code = len(BASES) * code + BASES[base]
+        code = code * 5 + BASES[base]
     return code
 
 def _get_geno(file: str, chr: str) -> Tuple[pd.DataFrame, pd.Series, str]:

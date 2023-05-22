@@ -22,7 +22,7 @@ class TestFileInput:
         ['Y', 2, '.', 'C', 'G', 20, 'PASS', 'AF=0.5', 'GT', 0, 1]
     ]
     SINGLE_CHR_VCF = pd.DataFrame(SINGLE_CHR_VCF, columns = VCF_NAMES)
-    SINGLE_CHR_GENO = pd.DataFrame([[0, 3], [1, 2]], columns = SAMPLE_NAMES)
+    SINGLE_CHR_GENO = pd.DataFrame([[1, 4], [2, 3]], columns = SAMPLE_NAMES)
     SINGLE_CHR_POS = pd.Series([1, 2])
 
     MULTI_CHR_VCF = [
@@ -32,7 +32,7 @@ class TestFileInput:
     ]
     MULTI_CHR_VCF = pd.DataFrame(MULTI_CHR_VCF, columns = VCF_NAMES)
     MULTI_CHR_GENO = {'Y' : pd.DataFrame([[-10, -1]], columns = SAMPLE_NAMES),
-                      'MT' : pd.DataFrame([[17, 5]], columns = SAMPLE_NAMES)}
+                      'MT' : pd.DataFrame([[57, 12]], columns = SAMPLE_NAMES)}
     MULTI_CHR_POS = {'Y' : pd.Series([1]), 'MT' : pd.Series([2])}
     
     def test_is_gz_true(self):
@@ -147,8 +147,109 @@ class TestFileInput:
         assert e_info.type == SystemExit
 
 class TestUtilities:
-    # test _to_code, _make_groups, _merge_matrix_groups, _geno_dists, ERROR
-    pass
+    IDS = ['F1', 'F2', 'F3']
+    GENOS = pd.DataFrame([[1, 1, 1], [1, 1, 2], [1, 1, 2], [1, 2, 2]], 
+                         columns = IDS)
+    MATRIX = pd.DataFrame([[0, 0.25, 0.75], [0.25, 0, 0.5], [0.75, 0.5, 0]],
+                          index = IDS, columns = IDS)
+    IDS = set(IDS)
+
+    # test _geno_dists
+    def test_error(self):
+        for msg in ['ERROR', 'test message', '']:
+            with pytest.raises(SystemExit) as e_info:
+                myutils.ERROR(msg)
+            assert e_info.type == SystemExit
+    
+    def test_to_code_missing(self):
+        assert myutils._to_code("*") == -1
+    
+    def test_to_code_single(self):
+        for base, code in myutils.BASES.items():
+            assert myutils._to_code(base) == code
+    
+    def test_to_code_multi(self):
+        assert myutils._to_code('AA') == 6
+        assert myutils._to_code('AC') == 7
+        assert myutils._to_code('GCT') == 89
+    
+    def test_to_code_illegal(self):
+        for allele in ['.', 'A*', '2']:
+            with pytest.raises(SystemExit) as e_info:
+                myutils._to_code(allele)
+            assert e_info.type == SystemExit
+    
+    def test_make_groups_nomissing(self):
+        assert myutils._make_groups(self.IDS, ['F1', 'F2', 'F3']).sort() == \
+            [['F1'], ['F2'], ['F3']].sort() 
+        assert myutils._make_groups(self.IDS, ['F1,F2', 'F3']).sort() == \
+            [['F1', 'F2'], ['F3']].sort()
+        assert myutils._make_groups(self.IDS, ['F3,F1,F2']).sort() == \
+            [['F3', 'F1', 'F2']].sort()
+    
+    def test_make_groups_missing(self):
+        assert myutils._make_groups(self.IDS, ['F1', 'F2']).sort() == \
+            [['F1'], ['F2'], ['F3']].sort()
+        assert myutils._make_groups(self.IDS, ['F1,F2']).sort() == \
+            [['F1', 'F2'], ['F3']].sort()
+        assert myutils._make_groups(self.IDS, []).sort() == \
+            [['F1'], ['F2'], ['F3']].sort()
+    
+    def test_make_groups_duplicate(self):
+        dup_groups = [
+            ['F1', 'F1', 'F2', 'F3'], ['F2', 'F2'], ['F2,F2'],
+            ['F1,F3', 'F3'], ['F2,F3', 'F1,F3']
+        ]
+        for groups in dup_groups:
+            with pytest.raises(SystemExit) as e_info:
+                myutils._make_groups(self.IDS, groups)
+            assert e_info.type == SystemExit
+
+    def test_make_groups_nonexist(self):
+        nonexist_groups = [['X'], ['F1,F2', 'F3', 'X'], ['F2,', 'F1'], ['F3,X']]
+        for groups in nonexist_groups:
+            with pytest.raises(SystemExit) as e_info:
+                myutils._make_groups(self.IDS, groups)
+            assert e_info.type == SystemExit
+    
+    def test_merge_singles(self):
+        merged = myutils._merge_matrix_groups(
+            self.MATRIX, [['F1'], ['F2'], ['F3']]
+        )
+        assert merged.shape == (3, 3)
+        for i in self.IDS:
+            for j in self.IDS:
+                assert merged.loc[i, j] == self.MATRIX.loc[i, j]
+    
+    def test_merge_pair(self):
+        merged = myutils._merge_matrix_groups(
+            self.MATRIX, [['F1', 'F2'], ['F3']]
+        )
+        assert merged.shape == (2, 2)
+        assert merged.loc['F1,F2', 'F1,F2'] == 0
+        assert merged.loc['F3', 'F3'] == 0
+        assert merged.loc['F1,F2', 'F3'] == 0.625
+        assert merged.loc['F3', 'F1,F2'] == 0.625
+    
+    def test_merge_all(self):
+        merged = myutils._merge_matrix_groups(self.MATRIX, [['F1', 'F2', 'F3']])
+        assert merged.shape == (1, 1)
+        assert merged.loc['F1,F2,F3', 'F1,F2,F3'] == 0
+    
+    def test_geno_dist_identical(self):
+        dists = myutils._geno_dists(self.GENOS[['F1']], self.GENOS[['F1']])
+        assert dists.shape == (1, 1)
+        assert dists.loc['F1', 'F1'] == 0
+
+        F1_copy = self.GENOS[['F1']]
+        F1_copy['COPY'] = F1_copy['F1'].copy()
+        dists = myutils._geno_dists(self.GENOS[['F1']], F1_copy)
+        assert dists.shape == (1, 2)
+        assert dists.loc['F1', 'F1'] == 0
+        assert dists.loc['F1', 'COPY'] == 0
+    
+    def test_geno_dist_identical_group(self):
+        pass
 
 class TestAnalysis:
     # test dist_matrix, pca, identify_founders 
