@@ -13,6 +13,7 @@ from itertools import chain
 import sys
 # used for handling large amounts of data
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 # a function for computing distance matrices
 from sklearn.metrics import pairwise_distances
 # a class to do PCA
@@ -283,6 +284,8 @@ def _get_vcf_names(file: str) -> list[str]:
 
     if names is None:
         ERROR('VCF file {name} has no header line'.format(file = file))
+    if names[:9] != STANDARD_VCF_COLS:
+        ERROR('VCF column names are malformed; the first 9 are not as expected')
     return names
 
 def _load_vcf(file: str, chr: str) -> pd.DataFrame:
@@ -302,21 +305,17 @@ def _load_vcf(file: str, chr: str) -> pd.DataFrame:
         k positions x 9 + n samples table with all of the VCF's data 
     """
 
-    column_names = _get_vcf_names(file)
-    # check column names early to avoid unnecessary computation if they error
-    if column_names[:9] != STANDARD_VCF_COLS:
-        ERROR('VCF column names are malformed; the first 9 are not as expected')
-
     # read VCF with pandas, splitting on whitespace and ignoring header lines
     vcf = pd.read_csv(file, comment='#', delim_whitespace = True, 
-                      header = None, names = column_names)
+                      header = None, names = _get_vcf_names(file))
     
     if chr is None and vcf[CHR_COL].nunique() > 1:
         ERROR('More than one chromosome detected in VCF file. ' \
               'Must specify one chromosome to use.')
     # subset to a single chromosome if specified
     if chr is not None:
-        vcf = vcf[vcf[CHR_COL] == chr]
+        # index must be reset for later looping over rows
+        vcf = vcf[vcf[CHR_COL] == chr].reset_index(drop = True)
         # check if there are now no rows
         if vcf.shape[0] == 0:
             ERROR('No variants on chromosome {chr}'.format(chr = chr))
@@ -390,8 +389,12 @@ def _get_geno(file: str, chr: str) -> Tuple[pd.DataFrame, pd.Series, str]:
 
     # loop over all sample indices in the vcf's columns
     for col in range(9, vcf.shape[1]):
+        geno = vcf.iloc[:, col]
+        # if a column has only 0/1/etc., it will be numeric, but this needs str
+        if is_numeric_dtype(geno):
+            geno = geno.astype("string")
         # GT is the first item, before any :
-        geno = vcf.iloc[:, col].str.split(':').str[0]
+        geno = geno.str.split(':').str[0]
         # | and / are used to separate alleles on different chromosomes
         if geno.str.contains('|').any() or geno.str.contains('/').any():
             non_haploid = True
