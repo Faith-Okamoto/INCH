@@ -299,6 +299,3 @@ def _get_geno(file: str, chr: str) -> Tuple[pd.DataFrame, str]:
 
     return (pd.DataFrame(processed_gt, columns = vcf['samples'], 
                          index = vcf['variants/POS']), vcf['variants/CHROM'][0])
-
-if __name__ == '__main__':
-    print(identify_founders('example-files/founders.vcf', 'example-files/descendents.vcf', 'Y', None))

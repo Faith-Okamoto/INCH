@@ -1,7 +1,7 @@
 ##fileformat=VCFv4.3
 ##source=testdata
-##INFO=<ID=AF,Number=A,Type=Float,Description="Allele	Frequency">
-##FILTER=<ID=s50,Description="Less	than	50%	of	samples	have	data">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
+##FILTER=<ID=s50,Description="Less than 50% of samples have data">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
 #CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	D1	D2	D3	D4
 Y	1	.	T	A	20	PASS	AF=0	GT	.	1	1	.	
