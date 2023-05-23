@@ -93,9 +93,9 @@ assumes all data is from the same chromosome.
 ## File format
 
 File formats differ depending on which analysis was requested:
-- The format for the `-d` option is a two-column tab-separated file without a
-  header line. The first column is descendent IDs and the second is the ID of
-  the founder that descendent matches best.
+- The format for the `-d` option is a two-column file without a header line. The
+  first column is descendent IDs and the second is the ID of the founder or
+  group that the descendent matches best.
 - The format for the -m` option is an `n x n` matrix with row and column labels
   of founder IDs, where `n` is the number of founders or founder groups. Each
   cell is the Hamming distance between the founders in that row and column.
@@ -113,4 +113,4 @@ identification method was run by Daniel Munro.
 
 ## Testing
 
-To run tests (no tests right now)
+There is an incomplete test suite in `inch/test_utils.py`. It uses `pytest`.
