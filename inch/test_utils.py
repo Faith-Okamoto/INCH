@@ -1,35 +1,27 @@
 from . import myutils
 import pytest
 import pandas as pd
+from itertools import combinations
 
-class TestFileInput:
-    NON_GZ_FILE = 'test-files/single_chr.vcf'
-    GZ_FILE = 'test-files/single_chr.vcf.gz'
+class TestUtilities:
     MULTI_FILE = 'test-files/multi_chr.vcf'
-    SINGLE_CHR_FILES = [NON_GZ_FILE, GZ_FILE]
-
-    VCF_NAMES = ['#CHROM', 'POS', 'ID', 'REF', 'ALT', 'QUAL', 
-             'FILTER', 'INFO', 'FORMAT', 'S1', 'S2']
+    SINGLE_CHR_FILES = ['test-files/single_chr.vcf', 
+                        'test-files/single_chr.vcf.gz']
     SAMPLE_NAMES = ['S1', 'S2']
-    
-    SINGLE_CHR_VCF = [
-        ['Y', 1, '.', 'A', 'T', 20, 'PASS', 'AF=0.5', 'GT', 0, 1],
-        ['Y', 2, '.', 'C', 'G', 20, 'PASS', 'AF=0.5', 'GT', 0, 1]
-    ]
-    SINGLE_CHR_VCF = pd.DataFrame(SINGLE_CHR_VCF, columns = VCF_NAMES)
     SINGLE_CHR_GENO = pd.DataFrame([[1, 4], [2, 3]], columns = SAMPLE_NAMES,
                                    index = pd.Series([1, 2]))
 
-    MULTI_CHR_VCF = [
-        ['Y', 1, '.', 'A', '*,T', 20, 'PASS', 'AF=0', 'GT', './1', '1'],
-        ['MT', 2, '.', 'CGC', 'G,CC,CAC', 20, 
-         'PASS', 'AF=0.5', 'GT:GQ', '3|3:.', '2:.']
-    ]
-    MULTI_CHR_VCF = pd.DataFrame(MULTI_CHR_VCF, columns = VCF_NAMES)
     MULTI_CHR_GENO = {'Y' : pd.DataFrame([[-2, -1]], columns = SAMPLE_NAMES,
                                          index = pd.Series([1])),
                       'MT' : pd.DataFrame([[57, 12]], columns = SAMPLE_NAMES,
                                           index = pd.Series([2]))}
+    
+    IDS = ['F1', 'F2', 'F3']
+    GENOS = pd.DataFrame([[1, 1, 1], [1, 1, 2], [1, 1, 2], [1, 2, 2]], 
+                         columns = IDS)
+    MATRIX = pd.DataFrame([[0, 0.25, 0.75], [0.25, 0, 0.5], [0.75, 0.5, 0]],
+                          index = IDS, columns = IDS)
+    IDS = set(IDS)
 
     def test_get_geno_single_chr(self):
         for file in self.SINGLE_CHR_FILES:
@@ -53,8 +45,6 @@ class TestFileInput:
         for chr in ['Y', 'MT']:
             geno_found, chr_found = myutils._get_geno(self.MULTI_FILE, chr)
             correct_geno = self.MULTI_CHR_GENO[chr]
-            print(correct_geno)
-            print(geno_found)
             assert (geno_found.values == correct_geno.values).all()
             assert geno_found.columns.equals(correct_geno.columns)
             assert chr_found == chr
@@ -64,15 +54,6 @@ class TestFileInput:
             myutils._get_geno(self.MULTI_FILE, 'X')
         assert e_info.type == SystemExit
 
-class TestUtilities:
-    IDS = ['F1', 'F2', 'F3']
-    GENOS = pd.DataFrame([[1, 1, 1], [1, 1, 2], [1, 1, 2], [1, 2, 2]], 
-                         columns = IDS)
-    MATRIX = pd.DataFrame([[0, 0.25, 0.75], [0.25, 0, 0.5], [0.75, 0.5, 0]],
-                          index = IDS, columns = IDS)
-    IDS = set(IDS)
-
-    # test _geno_dists
     def test_error(self):
         for msg in ['ERROR', 'test message', '']:
             with pytest.raises(SystemExit) as e_info:
@@ -166,10 +147,79 @@ class TestUtilities:
         assert dists.loc['F1', 'F1'] == 0
         assert dists.loc['F1', 'COPY'] == 0
     
-    def test_geno_dist_identical_group(self):
-        pass
+    def test_geno_dist_nonidentical(self):
+        dists = myutils._geno_dists(self.GENOS, self.GENOS)
+        for i in self.IDS:
+            for j in self.IDS:
+                assert dists.loc[i, j] == self.MATRIX.loc[i, j]
 
 class TestAnalysis:
-    # test dist_matrix, pca, identify_founders 
-    # use test-files/founders.vcf and test-files/descendents.vcf
-    pass
+    FOUNDER_FILES = ['test-files/founders.vcf', 'test-files/founders.vcf.gz']
+    DESC_FILE = 'test-files/descendents.vcf'
+    FOUNDER_MAX_PCS = {'Y' : 4, 'MT': 3}
+
+    # test dist_matrix, identify_founders 
+    def test_pca_single_chr(self):
+        for chr in [None, 'Y']:
+            for n in range(1, 5):
+                evectors, evalues = myutils.pca(self.DESC_FILE, chr, n)
+                assert evectors.shape == (4, n)
+                assert len(evalues) == n
+                for i in range(1, n):
+                    assert evalues[i - 1] > evalues[i]
+                print(evectors)
+                d3_d4 = abs(evectors.loc['D3', 'PC1'] - 
+                            evectors.loc['D4', 'PC1'])
+                for i, j in combinations(['D1', 'D2', 'D3', 'D4'], 2):
+                    assert d3_d4 <= abs(evectors.loc[i, 'PC1'] - 
+                                        evectors.loc[j, 'PC1'])
+    
+    def test_pca_wrong_single_chr(self):
+        for n in range(1, 5):
+            with pytest.raises(SystemExit) as e_info:
+                myutils.pca(self.DESC_FILE, 'X', n)
+            assert e_info.type == SystemExit
+    
+    def test_pca_bad_n_single_chr(self):
+        for n in [-2, -1, 0, 5, 6, 7]:
+            with pytest.raises(SystemExit) as e_info:
+                myutils.pca(self.DESC_FILE, 'Y', n)
+            assert e_info.type == SystemExit
+    
+    def test_pca_all_multi_chr(self):
+        for file in self.FOUNDER_FILES:
+            for n in range(1, 4):
+                with pytest.raises(SystemExit) as e_info:
+                    myutils.pca(file, None, n)
+                assert e_info.type == SystemExit   
+    
+    def test_pca_existing_multi_chr(self):
+        for file in self.FOUNDER_FILES:
+            for chr in ['Y', 'MT']:
+                for n in range(1, self.FOUNDER_MAX_PCS[chr]):
+                    evectors, evalues = myutils.pca(file, chr, n)
+                    assert evectors.shape == (4, n)
+                    assert len(evalues) == n
+                    for i in range(1, n):
+                        assert evalues[i - 1] > evalues[i]
+                    f3_f4 = abs(evectors.loc['F3', 'PC1'] - 
+                                evectors.loc['F4', 'PC1'])
+                    for i, j in combinations(['F1', 'F2', 'F3', 'F4'], 2):
+                        assert f3_f4 <= abs(evectors.loc[i, 'PC1'] - 
+                                            evectors.loc[j, 'PC1'])
+    
+    def test_pca_nonexist_multi_chr(self):
+        for file in self.FOUNDER_FILES:
+            for n in range(1, 4):
+                with pytest.raises(SystemExit) as e_info:
+                    myutils.pca(file, 'X', n)
+                assert e_info.type == SystemExit
+    
+    def test_pca_bad_n_multi_chr(self):
+        for file in self.FOUNDER_FILES:
+            for chr in ['Y', 'MT']:
+                max_pcs = min(self.FOUNDER_MAX_PCS[chr], 4)
+                for n in [-2, -1, 0] + list(range(max_pcs + 1, max_pcs + 4)):
+                    with pytest.raises(SystemExit) as e_info:
+                        myutils.pca(file, chr, n)
+                    assert e_info.type == SystemExit

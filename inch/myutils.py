@@ -86,6 +86,10 @@ def pca(founders: str, chr: str, n_pc: int) -> Tuple[pd.DataFrame, list[float]]:
     """
 
     geno = _get_geno(founders, chr)[0]
+
+    if n_pc > min(geno.shape) or 0 >= n_pc:
+        ERROR('Cannot calculate {n} PCs: must be between 1 and {min_n}'.format(
+            n = n_pc, min_n = min(geno.shape)))
     # PCA requires the rows to be samples and the columns to be features
     geno = geno.transpose()
     # the PCA model must be pre-initialized with how many components to extract
@@ -132,6 +136,8 @@ def identify_founders(founders: str, descendents: str,
     if not set(founders.index).intersection(set(desc.index)):
         ERROR('Founders and descendents share no positions')
 
+    print(founders)
+    print(desc)
     # filter down to only shared positions
     founders = founders.filter(items = desc.index, axis = 0)
     desc = desc.filter(items = founders.index, axis = 0)
@@ -293,7 +299,7 @@ def _get_geno(file: str, chr: str) -> Tuple[pd.DataFrame, str]:
                 for i in range(len(geno))]
 
     orig_gt = vcf['calldata/GT']
-    processed_gt = np.zeros(orig_gt.shape[0:2], dtype = np.int8)
+    processed_gt = np.zeros(orig_gt.shape[0:2], dtype = np.int32)
     for row in range(orig_gt.shape[0]):
         processed_gt[row] = get_geno_code(row, orig_gt[row][:, 0])
 
