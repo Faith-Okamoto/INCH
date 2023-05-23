@@ -1,19 +1,19 @@
 ##fileformat=VCFv4.3
 ##source=testdata
-##INFO=<ID=AF,Number=A,Type=Float,Description="Allele Frequency">
-##FILTER=<ID=s50,Description="Less than 50% of samples have data">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele	Frequency">
+##FILTER=<ID=s50,Description="Less	than	50%	of	samples	have	data">
 ##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
-##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
-#CHROM  POS ID  REF ALT QUAL    FILTER  INFO    FORMAT F1   F2  F3  F4
-Y   1   .   A   T   20  PASS    AF=0.67  GT:GQ   0|0:.   1/1:.   0:. .:.
-Y   2   .   CC  G   20  PASS    AF=0.75  GT:GQ   0|0:.   1/1:.   0:. 0|0:.
-Y   3   .   G   A   20  PASS    AF=0.5  GT:GQ   0|0:.   1/1:.   0:. 1|1:.
-Y   4   .   T   G   20  PASS    AF=0.75  GT:GQ   0|0:.   1/1:.   0:. 0:.
-Y   5   .   ACT AT,ACGT 20  PASS    AF=0.25  GT:GQ   0|0:.   1/1:.   2:. 2:.
-Y   6   .   C   *,T 20  PASS    AF=0.25  GT:GQ   0|0:.   1/1:.   2:. 2/0:.
-Y   7   .   C   CC,A    20  PASS    AF=0.25  GT:GQ   0|0:.   1|1:.   2:. ./1:.
-Y   10  .   T   G,* 20  FAIL    AF=1  GT:GQ   0|0:.   ./.:.   .:. .:.
-MT   1   .   A   T   20  PASS    AF=0.67  GT:GQ   0|0:.   1/1:.   0:. .:.
-MT   2   .   CC  G   20  PASS    AF=0.75  GT:GQ   0|0:.   1/1:.   0:. 0|0:.
-MT   3   .   G   A   20  PASS    AF=0.5  GT:GQ   0|0:.   1/1:.   0:. 1|1:.
-MT   4   .   T   G   20  PASS    AF=0.5  GT:GQ   0|0:.   1/1:.   1:. 0:.
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype	Quality">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	F1	F2	F3	F4
+Y	1	.	A	T	20	PASS	AF=0.67	GT:GQ	0|0:.	1/1:.	0:.	.:.
+Y	2	.	CC	G	20	PASS	AF=0.75	GT:GQ	0|0:.	1/1:.	0:.	0|0:.
+Y	3	.	G	A	20	PASS	AF=0.5	GT:GQ	0|0:.	1/1:.	0:.	1|1:.
+Y	4	.	T	G	20	PASS	AF=0.75	GT:GQ	0|0:.	1/1:.	0:.	0:.
+Y	5	.	ACT	AT,ACGT	20	PASS	AF=0.25	GT:GQ	0|0:.	1/1:.	2:.	2:.
+Y	6	.	C	*,T	20	PASS	AF=0.25	GT:GQ	0|0:.	1/1:.	2:.	2/0:.
+Y	7	.	C	CC,A	20	PASS	AF=0.25	GT:GQ	0|0:.	1|1:.	2:.	./1:.
+Y	10	.	T	G,*	20	FAIL	AF=1	GT:GQ	0|0:.	./.:.	.:.	.:.
+MT	1	.	A	T	20	PASS	AF=0.67	GT:GQ	0|0:.	1/1:.	0:.	.:.
+MT	2	.	CC	G	20	PASS	AF=0.75	GT:GQ	0|0:.	1/1:.	0:.	0|0:.
+MT	3	.	G	A	20	PASS	AF=0.5	GT:GQ	0|0:.	1/1:.	0:.	1|1:.
+MT	4	.	T	G	20	PASS	AF=0.5	GT:GQ	0|0:.	1/1:.	1:.	0:.

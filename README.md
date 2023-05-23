@@ -10,11 +10,16 @@ https://github.com/gymreklab/cse185-demo-project/blob/main/README.md
 
 ## Install instructions
 
-Installation requires the `pandas` and `scikit-lean` libraries to be installed.
-You can install these  with `pip`:
+Installation requires the `pandas`, `scikit-lean`, and `scikit-allel` libraries
+to be installed. You can install these  with `pip`:
 
 ```
-pip install pandas scikit-learn
+pip install pandas scikit-learn scikit-allel
+```
+
+Next, create a local copy of this repository:
+```
+git clone https://github.com/Faith-Okamoto/INCH
 ```
 
 Once required libraries are installed, you can install INCH with the following
@@ -29,7 +34,7 @@ Note: if you do not have root access, you can run the commands above with
 additional options to install locally:
 
 ```
-pip install --user pandas scikit-learn
+pip install --user pandas scikit-learn scikit-allel
 python setup.py build
 python setup.py install --user
 ```
