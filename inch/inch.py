@@ -29,8 +29,8 @@ def main():
 		     metavar = 'GROUP', nargs = '+')
 
 	# what analysis type to run
-	parser.add_argument('-p', '--pca', help = 'Run PCA on founders. Default: 2', 
-		     metavar = 'NUM', nargs = '?', const = 2, type = int)
+	parser.add_argument('-p', '--pca', help = 'Run PCA on founders', 
+		     metavar = 'NUM', type = int)
 	parser.add_argument('-m', '--matrix',
 		     help = 'Calculate distance matrix for founders',
 			 action = 'store_true')

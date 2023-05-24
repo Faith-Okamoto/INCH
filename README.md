@@ -47,7 +47,7 @@ message.
 The basic usage of INCH is:
 
 ```
-inch [other options] {--pca 2|--matrix|--descendents descendents.vcf} founders.vcf
+inch {--pca 2|--matrix|--descendents descendents.vcf} founders.vcf [other options]
 ```
 
 To run INCH on a small test example (using files in this repo):
@@ -71,7 +71,6 @@ D5  F1
 The only required input to INCH is a VCF file. This file may be optionally 
 compressed using gzip. Users must specify exactly one of these three flags:
 - `-p NUM`, `--pca NUM`: compute NUM number of PCs for the given founders.
-  Default NUM is 2.
 - `-m`, `--matrix`: compute a distance matrix for the given founders.
 - `-d FILE`, `--descendents FILE`: match descendents to founders.
 
