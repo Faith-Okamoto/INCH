@@ -112,4 +112,4 @@ identification method was run by Daniel Munro.
 
 ## Testing
 
-There is an incomplete test suite in `inch/test_utils.py`. It uses `pytest`.
+There is a test suite in `inch/test_utils.py`. It uses `pytest`.
