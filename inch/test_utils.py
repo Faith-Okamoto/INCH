@@ -140,8 +140,9 @@ class TestUtilities:
         assert dists.shape == (1, 1)
         assert dists.loc['F1', 'F1'] == 0
 
-        F1_copy = self.GENOS[['F1']]
-        F1_copy['COPY'] = F1_copy['F1'].copy()
+        F1_copy = pd.DataFrame.from_dict({'F1' : self.GENOS['F1'].tolist(), 
+                                          'COPY' : self.GENOS['F1'].tolist()})
+        F1_copy.index = self.GENOS.index
         dists = myutils._geno_dists(self.GENOS[['F1']], F1_copy)
         assert dists.shape == (1, 2)
         assert dists.loc['F1', 'F1'] == 0
@@ -156,12 +157,25 @@ class TestUtilities:
 class TestAnalysis:
     FOUNDER_FILES = ['test-files/founders.vcf', 'test-files/founders.vcf.gz']
     DESC_FILE = 'test-files/descendents.vcf'
-    FOUNDER_MAX_PCS = {'Y' : 4, 'MT': 3}
-    CORRECT_ID = {'D1': 'F1', 'D2': 'F2', 'D3': 'F3', 'D4': 'F3'}
     FOUNDER_GROUPS = [['F1,F2,F3,F4'], ['F1', 'F2', 'F4'], ['F1,F2', 'F3']]
     FOUNDER_BAD_GROUPS = [['F1,F2,F3,F3'], ['F1', 'X', 'F4'], ['F1,F2', 'F1']]
 
-    # test dist_matrix
+    FOUNDER_MAX_PCS = {'Y' : 4, 'MT': 3}
+    CORRECT_ID = {'D1': 'F1', 'D2': 'F2', 'D3': 'F3', 'D4': 'F3'}
+    
+    DESC_IDS = ['D1', 'D2', 'D3', 'D4']
+    FOUNDER_IDS = ['F1', 'F2', 'F3', 'F4']
+    CORRECT_DESC_DISTS = [
+        ('D1', 'D2', 1), ('D1', 'D3', 0.875), ('D1', 'D4', 0.75),
+        ('D2', 'D3', 0.5), ('D2', 'D4', 0.875), ('D3', 'D4', 0.5)
+        ]
+    CORRECT_FOUNDER_DISTS = {
+        'Y' : [('F1', 'F2', 1), ('F1', 'F3', 0.5), ('F1', 'F4', 0.625),
+               ('F2', 'F3', 1), ('F2', 'F4', 0.875), ('F3', 'F4', 0.375)],
+        'MT' : [('F1', 'F2', 1), ('F1', 'F3', 2/3), ('F1', 'F4', 2/3),
+               ('F2', 'F3', 2/3), ('F2', 'F4', 2/3), ('F3', 'F4', 1/3)]
+        }
+
     def test_identify_all_multi_chr(self):
         for f, d in product(self.FOUNDER_FILES + [self.DESC_FILE], repeat = 2): 
             if f != self.DESC_FILE or d != self.DESC_FILE:
@@ -309,4 +323,99 @@ class TestAnalysis:
                 for n in [-2, -1, 0] + list(range(max_pcs + 1, max_pcs + 4)):
                     with pytest.raises(SystemExit) as e_info:
                         myutils.pca(file, chr, n)
+                    assert e_info.type == SystemExit
+    
+    def test_matrix_all_multi_chr(self):
+        for file in self.FOUNDER_FILES:
+            with pytest.raises(SystemExit) as e_info:
+                myutils.dist_matrix(file, None, None)
+            assert e_info.type == SystemExit
+
+    def test_matrix_single_chr(self):
+        for chr in ['Y', None]:
+            dists = myutils.dist_matrix(self.DESC_FILE, chr, None)
+            assert dists.shape == (4, 4)
+            for id in self.DESC_IDS:
+                assert dists.loc[id, id] == 0
+            for i, j, d in self.CORRECT_DESC_DISTS:
+                assert dists.loc[i, j] == d
+                assert dists.loc[j, i] == d
+    
+    def test_matrix_single_chr_groups(self):
+        merged_dists = [
+            ('D1,D2', 'D3', 0.6875), ('D1,D2', 'D4', 0.8125),
+            ('D3', 'D4', 0.5)
+        ]
+        for chr in ['Y', None]:
+            dists = myutils.dist_matrix(self.DESC_FILE, chr, ['D1,D2,D3,D4'])
+            assert dists.shape == (1, 1)
+            assert dists.loc['D1,D2,D3,D4', 'D1,D2,D3,D4'] == 0
+
+            dists = myutils.dist_matrix(self.DESC_FILE, chr, ['D1', 'D2', 'D4'])
+            assert dists.shape == (4, 4)
+            for id in self.DESC_IDS:
+                assert dists.loc[id, id] == 0
+            for i, j, d in self.CORRECT_DESC_DISTS:
+                assert dists.loc[i, j] == d
+                assert dists.loc[j, i] == d
+            
+            dists = myutils.dist_matrix(self.DESC_FILE, chr, ['D1,D2', 'D3'])
+            assert dists.shape == (3, 3)
+            for id in ['D1,D2', 'D3', 'D4']:
+                assert dists.loc[id, id] == 0
+            for i, j, d in merged_dists:
+                assert dists.loc[i, j] == d
+                assert dists.loc[j, i] == d
+    
+    def test_matrix_single_chr_bad_groups(self):
+        for groups in [['D1,D2,D3,D3'], ['D1', 'X', 'D4'], ['D1,D2', 'D1']]:
+            for chr in ['Y', None, 'X']:
+                with pytest.raises(SystemExit) as e_info:
+                    myutils.dist_matrix(self.DESC_FILE, chr, groups)
+                assert e_info.type == SystemExit
+    
+    def test_matrix_multi_chr(self):
+        for file in self.FOUNDER_FILES:
+            for chr in ['Y', 'MT']:
+                dists = myutils.dist_matrix(file, chr, None)
+                assert dists.shape == (4, 4)
+                for id in self.FOUNDER_IDS:
+                    assert dists.loc[id, id] == 0
+                for i, j, d in self.CORRECT_FOUNDER_DISTS[chr]:
+                    assert dists.loc[i, j] == d
+                    assert dists.loc[j, i] == d
+    
+    def test_matrix_multi_chr_groups(self):
+        merged_dists = {'Y' : [('F1,F2', 'F3', 0.75), ('F1,F2', 'F4', 0.75),
+                               ('F3', 'F4', 0.375)],
+                        'MT' : [('F1,F2', 'F3', 2 / 3), ('F1,F2', 'F4', 2 / 3),
+                               ('F3', 'F4', 1 / 3)]}
+        for file in self.FOUNDER_FILES:
+            for chr in ['Y', 'MT']:
+                dists = myutils.dist_matrix(file, chr, ['F1,F2,F3,F4'])
+                assert dists.shape == (1, 1)
+                assert dists.loc['F1,F2,F3,F4', 'F1,F2,F3,F4'] == 0
+
+                dists = myutils.dist_matrix(file, chr, ['F1', 'F2', 'F4'])
+                assert dists.shape == (4, 4)
+                for id in self.FOUNDER_IDS:
+                    assert dists.loc[id, id] == 0
+                for i, j, d in self.CORRECT_FOUNDER_DISTS[chr]:
+                    assert dists.loc[i, j] == d
+                    assert dists.loc[j, i] == d
+                
+                dists = myutils.dist_matrix(file, chr, ['F1,F2', 'F3'])
+                assert dists.shape == (3, 3)
+                for id in ['F1,F2', 'F3', 'F4']:
+                    assert dists.loc[id, id] == 0
+                for i, j, d in merged_dists[chr]:
+                    assert dists.loc[i, j] == d
+                    assert dists.loc[j, i] == d
+    
+    def test_matrix_multi_chr_bad_groups(self):
+        for f_file in self.FOUNDER_FILES:
+            for groups in self.FOUNDER_BAD_GROUPS:
+                for chr in ['Y', 'MT', 'X', None]:
+                    with pytest.raises(SystemExit) as e_info:
+                        myutils.dist_matrix(f_file, chr, groups)
                     assert e_info.type == SystemExit
