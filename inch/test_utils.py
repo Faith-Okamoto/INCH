@@ -1,7 +1,7 @@
 from . import myutils
 import pytest
 import pandas as pd
-from itertools import combinations
+from itertools import combinations, product
 
 class TestUtilities:
     MULTI_FILE = 'test-files/multi_chr.vcf'
@@ -157,8 +157,96 @@ class TestAnalysis:
     FOUNDER_FILES = ['test-files/founders.vcf', 'test-files/founders.vcf.gz']
     DESC_FILE = 'test-files/descendents.vcf'
     FOUNDER_MAX_PCS = {'Y' : 4, 'MT': 3}
+    CORRECT_ID = {'D1': 'F1', 'D2': 'F2', 'D3': 'F3', 'D4': 'F3'}
+    FOUNDER_GROUPS = [['F1,F2,F3,F4'], ['F1', 'F2', 'F4'], ['F1,F2', 'F3']]
+    FOUNDER_BAD_GROUPS = [['F1,F2,F3,F3'], ['F1', 'X', 'F4'], ['F1,F2', 'F1']]
 
     # test dist_matrix, identify_founders 
+    def test_identify_all_multi_chr(self):
+        for f, d in product(self.FOUNDER_FILES + [self.DESC_FILE], repeat = 2): 
+            if f != self.DESC_FILE or d != self.DESC_FILE:
+                with pytest.raises(SystemExit) as e_info:
+                    myutils.identify_founders(f, d, None, None)
+                assert e_info.type == SystemExit
+    
+    def test_identify_identical_single_chr(self):
+        for chr in ['Y', None]:
+            ids = myutils.identify_founders(self.DESC_FILE, self.DESC_FILE, 
+                                            chr, None)
+            for i in range(len(ids)):
+                assert ids[i] == ids.index[i]
+    
+    def test_identify_identical_single_chr_groups(self):
+        for groups in [['D1,D2,D3,D4'], ['D1', 'D2', 'D4'], ['D1,D2', 'D3']]:
+            for chr in ['Y', None]:
+                ids = myutils.identify_founders(self.DESC_FILE, self.DESC_FILE, 
+                                                chr, groups)
+                for i in range(len(ids)):
+                    assert ids.index[i] in ids[i]
+    
+    def test_identify_identical_single_chr_bad_groups(self):
+        for groups in [['D1,D2,D3,D3'], ['D1', 'X', 'D4'], ['D1,D2', 'D1']]:
+            for chr in ['Y', None]:
+                with pytest.raises(SystemExit) as e_info:
+                    myutils.identify_founders(self.DESC_FILE, self.DESC_FILE, 
+                                              chr, groups)
+                assert e_info.type == SystemExit
+    
+    def test_identify_identical_multi_chr(self):
+        for f, d in product(self.FOUNDER_FILES, repeat = 2):
+            for chr in ['Y', 'MT']:
+                ids = myutils.identify_founders(f, d, chr, None)
+                for i in range(len(ids)):
+                    assert ids[i] == ids.index[i]
+    
+    def test_identify_identical_multi_chr_groups(self):
+        for f, d in product(self.FOUNDER_FILES, repeat = 2):
+            for groups in self.FOUNDER_GROUPS:
+                for chr in ['Y', 'MT']:
+                    ids = myutils.identify_founders(f, d, chr, groups)
+                    for i in range(len(ids)):
+                        assert ids.index[i] in ids[i]
+    
+    def test_identify_identical_multi_chr_bad_groups(self):
+        for f, d in product(self.FOUNDER_FILES, repeat = 2):
+            for groups in self.FOUNDER_BAD_GROUPS:
+                for chr in ['Y', 'MT', 'X', None]:
+                    with pytest.raises(SystemExit) as e_info:
+                        myutils.identify_founders(f, d, chr, groups)
+                    assert e_info.type == SystemExit
+
+    def test_identify_diff(self):
+        for f_file in self.FOUNDER_FILES:
+            ids = myutils.identify_founders(f_file, self.DESC_FILE, 'Y', None)
+            for d, f in self.CORRECT_ID.items():
+                assert ids[d] == f
+        
+    def test_identify_diff_groups(self):
+        for f_file in self.FOUNDER_FILES:
+            for groups in self.FOUNDER_GROUPS:
+                ids = myutils.identify_founders(f_file, self.DESC_FILE, 
+                                                'Y', groups)
+                for d, f in self.CORRECT_ID.items():
+                    assert f in ids[d]
+    
+    def test_identify_diff_bad_groups(self):
+        for f_file in self.FOUNDER_FILES:
+            for groups in self.FOUNDER_BAD_GROUPS:
+                for chr in ['Y', 'MT', 'X', None]:
+                    with pytest.raises(SystemExit) as e_info:
+                        myutils.identify_founders(f_file, self.DESC_FILE, 
+                                                  chr, groups)
+                    assert e_info.type == SystemExit
+    
+    def test_identify_diff_wrong_chr(self):
+        for groups in self.FOUNDER_GROUPS:
+            for chr in ['MT', 'X']:
+                for f_file in self.FOUNDER_FILES:
+                    with pytest.raises(SystemExit) as e_info:
+                        myutils.identify_founders(f_file, self.DESC_FILE, 
+                                                  chr, groups)
+                    assert e_info.type == SystemExit
+
     def test_pca_single_chr(self):
         for chr in [None, 'Y']:
             for n in range(1, 5):
@@ -167,7 +255,6 @@ class TestAnalysis:
                 assert len(evalues) == n
                 for i in range(1, n):
                     assert evalues[i - 1] > evalues[i]
-                print(evectors)
                 d3_d4 = abs(evectors.loc['D3', 'PC1'] - 
                             evectors.loc['D4', 'PC1'])
                 for i, j in combinations(['D1', 'D2', 'D3', 'D4'], 2):

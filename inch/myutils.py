@@ -136,8 +136,6 @@ def identify_founders(founders: str, descendents: str,
     if not set(founders.index).intersection(set(desc.index)):
         ERROR('Founders and descendents share no positions')
 
-    print(founders)
-    print(desc)
     # filter down to only shared positions
     founders = founders.filter(items = desc.index, axis = 0)
     desc = desc.filter(items = founders.index, axis = 0)
