@@ -161,7 +161,7 @@ class TestAnalysis:
     FOUNDER_GROUPS = [['F1,F2,F3,F4'], ['F1', 'F2', 'F4'], ['F1,F2', 'F3']]
     FOUNDER_BAD_GROUPS = [['F1,F2,F3,F3'], ['F1', 'X', 'F4'], ['F1,F2', 'F1']]
 
-    # test dist_matrix, identify_founders 
+    # test dist_matrix
     def test_identify_all_multi_chr(self):
         for f, d in product(self.FOUNDER_FILES + [self.DESC_FILE], repeat = 2): 
             if f != self.DESC_FILE or d != self.DESC_FILE:
