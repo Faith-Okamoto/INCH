@@ -20,7 +20,7 @@ def main():
 
 	# input
 	parser.add_argument('founders', help = 'VCF with founder genotypes', 
-		     metavar = 'FOUNDER VCF')
+		     metavar = 'FOUNDER-VCF')
 
 	# extra analysis options
 	parser.add_argument('-c', '--chr', help = 'Chromosome to filter from VCF', 
@@ -34,7 +34,7 @@ def main():
 	parser.add_argument('-m', '--matrix',
 		     help = 'Calculate distance matrix for founders',
 			 action = 'store_true')
-	parser.add_argument('-d', '--descendents', metavar = 'DESCENDENT VCF', 
+	parser.add_argument('-d', '--descendents', metavar = 'DESCENDENT-VCF', 
 		     help = 'VCF with descendent genotypes')
 
 	# output
@@ -51,11 +51,11 @@ def main():
 	if sum(map(bool, [args.pca is not None, args.matrix, args.descendents])) != 1:
 		myutils.ERROR('Please specify exactly one of -p, -m, or -d.')
 	if not path.exists(args.founders):
-		myutils.ERROR('{founders} does not exist'.format(args.founders))
+		myutils.ERROR('{founders} does not exist'.format(founders = args.founders))
 	if args.descendents is not None and not path.exists(args.descendents):
-		myutils.ERROR('{desc} does not exist'.format(args.descendents))
+		myutils.ERROR('{desc} does not exist'.format(desc = args.descendents))
 	if args.out is not None and not path.exists(path.dirname(args.out)):
-		myutils.ERROR('Directory for {out} does not exist'.format(args.out))
+		myutils.ERROR('Directory for {out} does not exist'.format(out = args.out))
 	if args.groups is not None and args.pca is not None:
 		myutils.ERROR('Groups cannot be used in conjuction with PCA analysis')
 	

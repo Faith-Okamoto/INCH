@@ -279,7 +279,10 @@ def _get_geno(file: str, chr: str) -> Tuple[pd.DataFrame, str]:
         Chromosome used from VCF file
     """
 
-    vcf = allel.read_vcf(file, region = chr)
+    try:
+        vcf = allel.read_vcf(file, region = chr)
+    except RuntimeError:
+        ERROR("Unable to read VCF file {file}".format(file = file))
     if vcf is None:
         ERROR("No variants in {file} on {chr}".format(file = file, chr = chr))
     if len(np.unique(vcf['variants/CHROM'])) > 1:
