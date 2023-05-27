@@ -104,6 +104,26 @@ File formats differ depending on which analysis was requested:
   number of PCs used. Column and row labels are included. Each cell is the
   weight of that row's founder under that column's principle component.
 
+## Usage on real data
+
+To run on a larger test example, I have provided some real data from the Y
+chromosome of [HS rats](https://ratgenes.org/cores/core-b/). This is courtesy of
+[Palmer Lab](https://palmerlab.org/). Get these files with:
+
+```
+curl https://palmerlab.s3.sdsc.edu/Faith_CS185_data/data.tar.gz > data.tar.gz
+tar -xzvf data.tar.gz
+```
+
+A new directory `project-data` will be created. Some suggested commands are:
+
+```
+# see relationships between founders
+inch -m project-data/founders.vcf.gz
+# separate into the two major Y chromosome groups
+inch -d project-data/descendents.vcf.gz project-data/founders.vcf.gz -g ACI,BN,MR BUF,F344,M520,WKY,WN
+```
+
 ## Contributors
 
 This project was entirely coded by Faith Okamoto, with some idea generation by
