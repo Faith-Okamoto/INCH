@@ -20,6 +20,7 @@ pip install pandas scikit-learn scikit-allel
 Next, create a local copy of this repository:
 ```
 git clone https://github.com/Faith-Okamoto/INCH
+cd INCH
 ```
 
 Once required libraries are installed, you can install INCH with the following
@@ -35,6 +36,8 @@ additional options to install locally:
 
 ```
 pip install --user pandas scikit-learn scikit-allel
+git clone https://github.com/Faith-Okamoto/INCH
+cd INCH
 python setup.py build
 python setup.py install --user
 ```
