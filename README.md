@@ -43,7 +43,8 @@ python setup.py install --user
 ```
 
 If the install was successful, typing `inch --help` should show a useful 
-message.
+message. If that does nothing, check where INCH was installed to, and make sure
+that it is on your `PATH`.
 
 ## Basic usage
 
@@ -62,11 +63,24 @@ inch -d example-files/descendents.vcf example-files/founders.vcf
 This should produce the output below:
 
 ```
-D1  F1
-D2  F2
-D3  F1
-D4  F2
-D5  F1
+D1,F1
+D2,F2
+D3,F1
+D4,F2
+D5,F1
+```
+
+Some other commands which may be instructive to run:
+
+```
+# distance between founders: they do not match
+inch -m example-files/founders.vcf 
+# PCA on founders: the first dimension can capture everything
+inch -p 2 example-files/founders.vcf 
+# distance between descendents: see the groups
+inch -m example-files/descendents.vcf
+# PCA on descendents: see the groups again
+inch -p 3 example-files/descendents.vcf
 ```
 
 ## INCH options
@@ -95,16 +109,16 @@ assumes all data is from the same chromosome.
 ## File format
 
 File formats differ depending on which analysis was requested:
-- The format for the `-d` option is a two-column file without a header line. The
-  first column is descendent IDs and the second is the ID of the founder or
+- The format for the `-d` option is a two-column CSV file without a header line.
+  The first column is descendent IDs and the second is the ID of the founder or
   group that the descendent matches best.
-- The format for the `-m` option is an `n x n` matrix with row and column labels
-  of founder IDs, where `n` is the number of founders or founder groups. Each
-  cell is the Hamming distance between the founders in that row and column.
+- The format for the `-m` option is an `n x n` CSV matrix with row and column
+  labels of founder IDs, where `n` is the number of founders or founder groups.
+  Each cell is the Hamming distance between the founders in that row and column.
 - The format for the `-p` option is a file with two parts. The first line has
   space-separated eigenvalues for the PCA eigenvectors, starting with PC1. After
-  that is an `n x p` table, where `n` is the number of founders and `p` is the
-  number of PCs used. Column and row labels are included. Each cell is the
+  that is an `n x p` CSV table, where `n` is the number of founders and `p` is
+  the number of PCs used. Column and row labels are included. Each cell is the
   weight of that row's founder under that column's principle component.
 
 ## Usage on real data

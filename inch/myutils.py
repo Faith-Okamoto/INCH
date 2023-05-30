@@ -64,7 +64,7 @@ def dist_matrix(founders: str, chr: str, groups: list[str]) -> pd.DataFrame:
     matrix = _geno_dists(geno, geno)
     return matrix if groups is None else _merge_matrix_groups(matrix, groups)
 
-def pca(founders: str, chr: str, n_pc: int) -> Tuple[pd.DataFrame, list[float]]:
+def pca(founders: str, chr: str, n_pc: int) -> Tuple[pd.DataFrame, np.ndarray]:
     """
     Run PCA on samples
 
@@ -81,7 +81,7 @@ def pca(founders: str, chr: str, n_pc: int) -> Tuple[pd.DataFrame, list[float]]:
 	-------
 	eigenvectors : pd.DataFrame
         k samples x n PCs table of each sample's weight along each PC
-    eigenvalues : list[float]
+    eigenvalues : np.ndarray
         eigenvalues for each PC in decreasing order (PC1, PC2, ...)
     """
 
@@ -98,7 +98,7 @@ def pca(founders: str, chr: str, n_pc: int) -> Tuple[pd.DataFrame, list[float]]:
     # extract weights for each sample along the eigenvectors
     eigenvec = pd.DataFrame(pca.transform(geno), index = geno.index,
                             columns = ['PC' + str(i + 1) for i in range(n_pc)])
-    return eigenvec, [evalue for evalue in pca.explained_variance_]
+    return eigenvec, pca.explained_variance_
 
 def identify_founders(founders: str, descendents: str, 
                       chr: str, groups: list[str]) -> pd.Series:

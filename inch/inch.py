@@ -11,6 +11,7 @@ from inch import myutils, __version__
 # basic utilities
 from os import path
 import sys
+import pandas as pd
 
 def main():
 	parser = argparse.ArgumentParser(
@@ -59,23 +60,20 @@ def main():
 	if args.groups is not None and args.pca is not None:
 		myutils.ERROR('Groups cannot be used in conjuction with PCA analysis')
 	
+	outf = sys.stdout if args.out is None else open(args.out, 'w')
 	
-	# perform appropriate analysis and save result as a string
 	if args.matrix:
-		out = str(myutils.dist_matrix(args.founders, args.chr, args.groups))
+		myutils.dist_matrix(args.founders, args.chr, args.groups).to_csv(outf)
 	if args.descendents is not None:
-		out = myutils.identify_founders(
-			args.founders, args.descendents, args.chr, args.groups).to_string()
+		myutils.identify_founders(args.founders, args.descendents, 
+			    args.chr, args.groups).to_csv(outf, header = False)
 	if args.pca is not None:
 		e_vecs, e_vals = myutils.pca(args.founders, args.chr, args.pca)
-		out = ' '.join([str(round(e_val, ndigits = 4)) for e_val in e_vals]) \
-			+ '\n' + str(e_vecs)
+		outf.write(' '.join([str(round(e, ndigits = 4)) for e in e_vals]))
+		outf.write('\n')
+		e_vecs.to_csv(outf, mode = 'a')
 	
-	# write string to output file
-	outf = sys.stdout if args.out is None else open(args.out, 'w')
-	outf.write(out)
 	outf.close()
-
 	sys.exit(0)
 
 if __name__ == '__main__':
