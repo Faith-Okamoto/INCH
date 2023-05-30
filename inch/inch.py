@@ -11,7 +11,6 @@ from inch import myutils, __version__
 # basic utilities
 from os import path
 import sys
-import pandas as pd
 
 def main():
 	parser = argparse.ArgumentParser(
