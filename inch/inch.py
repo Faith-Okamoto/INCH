@@ -27,6 +27,9 @@ def main():
 		     metavar = 'CHR')
 	parser.add_argument('-g', '--groups', help = 'Founder groups', 
 		     metavar = 'GROUP', nargs = '+')
+	parser.add_argument('--dump-matrix', 
+		     help = 'Write intermediate founders-descendents distance matrix',
+		     metavar = 'FILE')
 
 	# what analysis type to run
 	parser.add_argument('-p', '--pca', help = 'Run PCA on founders', 
@@ -50,10 +53,15 @@ def main():
 	# check legality of arguments
 	if sum(map(bool, [args.pca is not None, args.matrix, args.descendents])) != 1:
 		myutils.ERROR('Please specify exactly one of -p, -m, or -d.')
+	if args.dump_matrix is not None and args.descendents is None:
+		myutils.ERROR('--dump-matrix must be used with --descendents')
 	if not path.exists(args.founders):
 		myutils.ERROR('{founders} does not exist'.format(founders = args.founders))
-	if args.descendents is not None and not path.exists(args.descendents):
-		myutils.ERROR('{desc} does not exist'.format(desc = args.descendents))
+	if args.descendents is not None:
+		if not path.exists(args.descendents):
+			myutils.ERROR('{desc} does not exist'.format(desc = args.descendents))
+		if args.dump_matrix is not None and not path.exists(path.dirname(args.dump_matrix)):
+			myutils.ERROR('Directory for {matrix} does not exist'.format(matrix = args.dump_matrix))
 	if args.out is not None and not path.exists(path.dirname(args.out)):
 		myutils.ERROR('Directory for {out} does not exist'.format(out = args.out))
 	if args.groups is not None and args.pca is not None:
@@ -64,8 +72,8 @@ def main():
 	if args.matrix:
 		myutils.dist_matrix(args.founders, args.chr, args.groups).to_csv(outf)
 	if args.descendents is not None:
-		myutils.identify_founders(args.founders, args.descendents, 
-			    args.chr, args.groups).to_csv(outf, header = False)
+		myutils.identify_founders(args.founders, args.descendents, args.chr,
+			    args.groups, args.dump_matrix).to_csv(outf, header = False)
 	if args.pca is not None:
 		e_vecs, e_vals = myutils.pca(args.founders, args.chr, args.pca)
 		outf.write(' '.join([str(round(e, ndigits = 4)) for e in e_vals]))

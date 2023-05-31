@@ -157,6 +157,7 @@ class TestUtilities:
 class TestAnalysis:
     FOUNDER_FILES = ['test-files/founders.vcf', 'test-files/founders.vcf.gz']
     DESC_FILE = 'test-files/descendents.vcf'
+    FAKE_FILE = 'test-files/fake.vcf'
     FOUNDER_GROUPS = [['F1,F2,F3,F4'], ['F1', 'F2', 'F4'], ['F1,F2', 'F3']]
     FOUNDER_BAD_GROUPS = [['F1,F2,F3,F3'], ['F1', 'X', 'F4'], ['F1,F2', 'F1']]
 
@@ -175,18 +176,26 @@ class TestAnalysis:
         'MT' : [('F1', 'F2', 1), ('F1', 'F3', 2/3), ('F1', 'F4', 2/3),
                ('F2', 'F3', 2/3), ('F2', 'F4', 2/3), ('F3', 'F4', 1/3)]
         }
+    
+    def test_identify_fake_vcf(self):
+        for f, d in product(self.FOUNDER_FILES + [self.FAKE_FILE],
+                            [self.DESC_FILE, self.FAKE_FILE]):
+            if f == self.FAKE_FILE or d == self.FAKE_FILE:
+                with pytest.raises(SystemExit) as e_info:
+                    myutils.identify_founders(f, d, None, None, None)
+                assert e_info.type == SystemExit    
 
     def test_identify_all_multi_chr(self):
         for f, d in product(self.FOUNDER_FILES + [self.DESC_FILE], repeat = 2): 
             if f != self.DESC_FILE or d != self.DESC_FILE:
                 with pytest.raises(SystemExit) as e_info:
-                    myutils.identify_founders(f, d, None, None)
+                    myutils.identify_founders(f, d, None, None, None)
                 assert e_info.type == SystemExit
     
     def test_identify_identical_single_chr(self):
         for chr in ['Y', None]:
             ids = myutils.identify_founders(self.DESC_FILE, self.DESC_FILE, 
-                                            chr, None)
+                                            chr, None, None)
             for i in range(len(ids)):
                 assert ids[i] == ids.index[i]
     
@@ -194,7 +203,7 @@ class TestAnalysis:
         for groups in [['D1,D2,D3,D4'], ['D1', 'D2', 'D4'], ['D1,D2', 'D3']]:
             for chr in ['Y', None]:
                 ids = myutils.identify_founders(self.DESC_FILE, self.DESC_FILE, 
-                                                chr, groups)
+                                                chr, groups, None)
                 for i in range(len(ids)):
                     assert ids.index[i] in ids[i]
     
@@ -203,13 +212,13 @@ class TestAnalysis:
             for chr in ['Y', None]:
                 with pytest.raises(SystemExit) as e_info:
                     myutils.identify_founders(self.DESC_FILE, self.DESC_FILE, 
-                                              chr, groups)
+                                              chr, groups, None)
                 assert e_info.type == SystemExit
     
     def test_identify_identical_multi_chr(self):
         for f, d in product(self.FOUNDER_FILES, repeat = 2):
             for chr in ['Y', 'MT']:
-                ids = myutils.identify_founders(f, d, chr, None)
+                ids = myutils.identify_founders(f, d, chr, None, None)
                 for i in range(len(ids)):
                     assert ids[i] == ids.index[i]
     
@@ -217,7 +226,7 @@ class TestAnalysis:
         for f, d in product(self.FOUNDER_FILES, repeat = 2):
             for groups in self.FOUNDER_GROUPS:
                 for chr in ['Y', 'MT']:
-                    ids = myutils.identify_founders(f, d, chr, groups)
+                    ids = myutils.identify_founders(f, d, chr, groups, None)
                     for i in range(len(ids)):
                         assert ids.index[i] in ids[i]
     
@@ -226,12 +235,13 @@ class TestAnalysis:
             for groups in self.FOUNDER_BAD_GROUPS:
                 for chr in ['Y', 'MT', 'X', None]:
                     with pytest.raises(SystemExit) as e_info:
-                        myutils.identify_founders(f, d, chr, groups)
+                        myutils.identify_founders(f, d, chr, groups, None)
                     assert e_info.type == SystemExit
 
     def test_identify_diff(self):
         for f_file in self.FOUNDER_FILES:
-            ids = myutils.identify_founders(f_file, self.DESC_FILE, 'Y', None)
+            ids = myutils.identify_founders(f_file, self.DESC_FILE, 
+                                            'Y', None, None)
             for d, f in self.CORRECT_ID.items():
                 assert ids[d] == f
         
@@ -239,7 +249,7 @@ class TestAnalysis:
         for f_file in self.FOUNDER_FILES:
             for groups in self.FOUNDER_GROUPS:
                 ids = myutils.identify_founders(f_file, self.DESC_FILE, 
-                                                'Y', groups)
+                                                'Y', groups, None)
                 for d, f in self.CORRECT_ID.items():
                     assert f in ids[d]
     
@@ -249,7 +259,7 @@ class TestAnalysis:
                 for chr in ['Y', 'MT', 'X', None]:
                     with pytest.raises(SystemExit) as e_info:
                         myutils.identify_founders(f_file, self.DESC_FILE, 
-                                                  chr, groups)
+                                                  chr, groups, None)
                     assert e_info.type == SystemExit
     
     def test_identify_diff_wrong_chr(self):
@@ -258,8 +268,13 @@ class TestAnalysis:
                 for f_file in self.FOUNDER_FILES:
                     with pytest.raises(SystemExit) as e_info:
                         myutils.identify_founders(f_file, self.DESC_FILE, 
-                                                  chr, groups)
+                                                  chr, groups, None)
                     assert e_info.type == SystemExit
+    
+    def test_pca_fake_vcf(self):
+        with pytest.raises(SystemExit) as e_info:
+            myutils.pca(self.FAKE_FILE, None, 2)
+        assert e_info.type == SystemExit
 
     def test_pca_single_chr(self):
         for chr in [None, 'Y']:
@@ -324,6 +339,11 @@ class TestAnalysis:
                     with pytest.raises(SystemExit) as e_info:
                         myutils.pca(file, chr, n)
                     assert e_info.type == SystemExit
+
+    def test_matrix_fake_vcf(self):
+        with pytest.raises(SystemExit) as e_info:
+            myutils.dist_matrix(self.FAKE_FILE, None, None)
+        assert e_info.type == SystemExit
     
     def test_matrix_all_multi_chr(self):
         for file in self.FOUNDER_FILES:

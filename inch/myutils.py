@@ -58,8 +58,7 @@ def dist_matrix(founders: str, chr: str, groups: list[str]) -> pd.DataFrame:
 
     geno = _get_geno(founders, chr)[0]
     # process groups early to avoid unnecessary computation if they error
-    if groups is not None:
-        groups = _make_groups(set(geno.columns), groups)
+    if groups is not None: groups = _make_groups(set(geno.columns), groups)
     # founder v founder distances
     matrix = _geno_dists(geno, geno)
     return matrix if groups is None else _merge_matrix_groups(matrix, groups)
@@ -100,8 +99,8 @@ def pca(founders: str, chr: str, n_pc: int) -> Tuple[pd.DataFrame, np.ndarray]:
                             columns = ['PC' + str(i + 1) for i in range(n_pc)])
     return eigenvec, pca.explained_variance_
 
-def identify_founders(founders: str, descendents: str, 
-                      chr: str, groups: list[str]) -> pd.Series:
+def identify_founders(founders: str, descendents: str, chr: str, 
+                      groups: list[str], dump_matrix: str) -> pd.Series:
     """
     Identify which founder a descendent matches best
 
@@ -116,6 +115,9 @@ def identify_founders(founders: str, descendents: str,
     groups : list[str]
         Founders to group together during final assignment.
         Each list item is a group; IDs with a group are comma-separated.
+    dump_matrix: str
+        If not None, the distance matrix of each descendent to each founder will
+        be written to the file specified.
     
     Returns
 	-------
@@ -141,7 +143,9 @@ def identify_founders(founders: str, descendents: str,
     desc = desc.filter(items = founders.index, axis = 0)
 
     # select closest founder to each desc using all founder v desc distances
-    matches = _geno_dists(desc, founders).idxmin(axis = 1)
+    matrix = _geno_dists(desc, founders)
+    if dump_matrix is not None: matrix.to_csv(dump_matrix)
+    matches = matrix.idxmin(axis = 1)
     return matches if groups is None else matches.replace(groups)
 
 def _make_groups(founder_ids: set[str], groups: list[str]) -> list[list[str]]:
@@ -173,9 +177,7 @@ def _make_groups(founder_ids: set[str], groups: list[str]) -> list[list[str]]:
         ERROR('Some groups contain nonexistant founder IDs')
     
     # make a new group for each ID which appears in no group
-    for id in founder_ids:
-        if id not in flat_groups:
-            groups.append([id])
+    [groups.append([id]) for id in founder_ids if id not in flat_groups]
     return groups
 
 def _geno_dists(row_geno: pd.DataFrame, col_geno: pd.DataFrame) -> pd.DataFrame:
@@ -229,7 +231,7 @@ def _merge_matrix_groups(matrix: pd.DataFrame,
         # calculate distance at row,col in the merged distance matrix
         # main diagonal is manually set to 0 and not average in-group distance
         return 0 if row == col else \
-            matrix.loc[groups[row]][groups[col]].mean(axis = None)
+            matrix.loc[groups[row]][groups[col]].mean(axis = 0).mean()
     
     # average between each group's members in the merged distance matrix
     return merged.apply(lambda x: [dist(row, x.name) for row in x.index])
@@ -250,8 +252,7 @@ def _to_code(geno: str) -> int:
     """
         
     # missingness due to an upstream deletion
-    if geno == '*':
-        return -1
+    if geno == '*': return -1
     # build up numeric code for allele as if ACGT is 1234 in base-5
     code = 0
     for base in geno:
@@ -279,8 +280,7 @@ def _get_geno(file: str, chr: str) -> Tuple[pd.DataFrame, str]:
         Chromosome used from VCF file
     """
 
-    try:
-        vcf = allel.read_vcf(file, region = chr)
+    try: vcf = allel.read_vcf(file, region = chr)
     except RuntimeError:
         ERROR("Unable to read VCF file {file}".format(file = file))
     if vcf is None:
