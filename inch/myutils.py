@@ -144,9 +144,15 @@ def identify_founders(founders: str, descendents: str, chr: str,
 
     # select closest founder to each desc using all founder v desc distances
     matrix = _geno_dists(desc, founders)
-    if dump_matrix is not None: matrix.to_csv(dump_matrix)
+    if dump_matrix is not None: print_df(matrix, dump_matrix)
     matches = matrix.idxmin(axis = 1)
     return matches if groups is None else matches.replace(groups)
+
+def print_df(df: pd.DataFrame, out, round = True,
+             header: bool = True, mode: str = 'w') -> None:
+    if round:
+        df = df.round(decimals = 4)
+    df.to_csv(out, sep = '\t', header = header, mode = mode)
 
 def _make_groups(founder_ids: set[str], groups: list[str]) -> list[list[str]]:
     """

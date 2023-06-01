@@ -70,15 +70,20 @@ def main():
 	outf = sys.stdout if args.out is None else open(args.out, 'w')
 	
 	if args.matrix:
-		myutils.dist_matrix(args.founders, args.chr, args.groups).to_csv(outf)
+		myutils.print_df(
+			myutils.dist_matrix(args.founders, args.chr, args.groups), outf
+		)
 	if args.descendents is not None:
-		myutils.identify_founders(args.founders, args.descendents, args.chr,
-			    args.groups, args.dump_matrix).to_csv(outf, header = False)
+		myutils.print_df(
+			myutils.identify_founders(args.founders, args.descendents, args.chr,
+			     args.groups, args.dump_matrix), 
+				 outf, round = False, header = False
+		)
 	if args.pca is not None:
 		e_vecs, e_vals = myutils.pca(args.founders, args.chr, args.pca)
-		outf.write(' '.join([str(round(e, ndigits = 4)) for e in e_vals]))
+		outf.write('\t'.join([str(round(e, ndigits = 4)) for e in e_vals]))
 		outf.write('\n')
-		e_vecs.to_csv(outf, mode = 'a')
+		myutils.print_df(e_vecs, outf, mode = 'a')
 	
 	outf.close()
 	sys.exit(0)

@@ -63,11 +63,11 @@ inch -d example-files/descendents.vcf example-files/founders.vcf
 This should produce the output below:
 
 ```
-D1,F1
-D2,F2
-D3,F1
-D4,F2
-D5,F1
+D1      F1
+D2      F2
+D3      F1
+D4      F2
+D5      F1
 ```
 
 Some other commands which may be instructive to run:
@@ -105,19 +105,21 @@ assumes all data is from the same chromosome.
   - If used with the `-m` flag, average distances between the members of each 
     group will be computed.
   - This flag may not be used with the `-p` flag.
+- `--dump-matrix FILE`: Write the descendents-vs-founders distance matrix
+  produced as an intermediate step to a file. Only used with `--descendents`.
 
 ## File format
 
 File formats differ depending on which analysis was requested:
-- The format for the `-d` option is a two-column CSV file without a header line.
+- The format for the `-d` option is a two-column TSV file without a header line.
   The first column is descendent IDs and the second is the ID of the founder or
   group that the descendent matches best.
-- The format for the `-m` option is an `n x n` CSV matrix with row and column
+- The format for the `-m` option is an `n x n` TSV matrix with row and column
   labels of founder IDs, where `n` is the number of founders or founder groups.
   Each cell is the Hamming distance between the founders in that row and column.
 - The format for the `-p` option is a file with two parts. The first line has
-  space-separated eigenvalues for the PCA eigenvectors, starting with PC1. After
-  that is an `n x p` CSV table, where `n` is the number of founders and `p` is
+  tab-separated eigenvalues for the PCA eigenvectors, starting with PC1. After
+  that is an `n x p` TSV table, where `n` is the number of founders and `p` is
   the number of PCs used. Column and row labels are included. Each cell is the
   weight of that row's founder under that column's principle component.
 
