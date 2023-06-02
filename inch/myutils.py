@@ -150,8 +150,24 @@ def identify_founders(founders: str, descendents: str, chr: str,
 
 def print_df(df: pd.DataFrame, out, round = True,
              header: bool = True, mode: str = 'w') -> None:
-    if round:
-        df = df.round(decimals = 4)
+    """
+    Pretty-print a Pandas data frame
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Data to print
+    out : FilePath | WriteBuffer[bytes] | WriteBuffer[str]
+        Where to write the data to
+    round : bool
+        Whether to round the data. Default True.
+    header : bool
+        Whether to print the header/column names. Default True.
+    mode: str
+        What mode to print the data in. Default 'w'.
+    """
+
+    if round: df = df.round(decimals = 4)
     df.to_csv(out, sep = '\t', header = header, mode = mode)
 
 def _make_groups(founder_ids: set[str], groups: list[str]) -> list[list[str]]:
