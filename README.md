@@ -10,11 +10,11 @@ https://github.com/gymreklab/cse185-demo-project/blob/main/README.md
 
 ## Install instructions
 
-Installation requires the `pandas`, `scikit-lean`, and `scikit-allel` libraries
-to be installed. You can install these  with `pip`:
+Installation requires the `numpy`, `pandas`, `scikit-lean`, and `scikit-allel`
+libraries to be installed. You can install these  with `pip`:
 
 ```
-pip install pandas scikit-learn scikit-allel
+pip install numpy pandas scikit-learn scikit-allel
 ```
 
 Next, create a local copy of this repository:
@@ -35,8 +35,8 @@ Note: if you do not have root access, you can run the commands above with
 additional options to install locally:
 
 ```
-pip install --user pandas scikit-learn scikit-allel
-git clone https://github.com/Faith-Okamoto/INCH
+pip install --user numpy pandas scikit-learn scikit-allel
+git clone https://github.com/Faith-Okamoto/INCH.git
 cd INCH
 python setup.py build
 python setup.py install --user
@@ -44,7 +44,13 @@ python setup.py install --user
 
 If the install was successful, typing `inch --help` should show a useful 
 message. If that does nothing, check where INCH was installed to, and make sure
-that it is on your `PATH`.
+that it is on your `PATH` environment variable (run `echo $PATH`).
+
+Code has been tested with these package versions:
+- `numpy` 1.24.3
+- `pandas` 1.5.3
+- `scikit-learn` 1.2.2
+- `scikit-allel` 1.3.6
 
 ## Basic usage
 
