@@ -170,28 +170,6 @@ def print_df(df: pd.DataFrame, out, round = True,
     if round: df = df.round(decimals = 4)
     df.to_csv(out, sep = '\t', header = header, mode = mode)
 
-def _hamming_ignore_missing(x: list[int], y: list[int]) -> int:
-    """
-    Calculate Hamming distance between genotypes ignoring missing positions
-
-    Parameters
-    ----------
-    x : list[int]
-        One numeric genotype
-    y : list[int]
-        Another numeric genotype
-    
-    Returns
-	-------
-	dist : int
-        Hamming distance between x and y excluding positions where either is -2
-    """
-
-    n_miss = sum([x[i] == -2 or y[i] == -2 for i in range(len(x))])
-    n_match = sum([x[i] != -2 and y[i] != -2 and x[i] == y[i] 
-                   for i in range(len(x))])
-    return 1 - (n_match / (len(x) - n_miss))
-
 def _make_groups(founder_ids: set[str], groups: list[str]) -> list[list[str]]:
     """
     Process input groups to create final final groups
@@ -243,7 +221,7 @@ def _geno_dists(row_geno: pd.DataFrame, col_geno: pd.DataFrame) -> pd.DataFrame:
 
     # sklearn requires samples to be rows and features to be columns
     matrix = pairwise_distances(row_geno.transpose(), col_geno.transpose(), 
-                                metric = _hamming_ignore_missing)
+                                metric = 'hamming')
     # label samples before returning the matrix
     return pd.DataFrame(matrix, index = row_geno.columns, 
                         columns = col_geno.columns)
@@ -338,8 +316,9 @@ def _get_geno(file: str, chr: str) -> Tuple[pd.DataFrame, str]:
                               vcf['variants/ALT']), axis = 1)
     alleles = [[_to_code(geno) for geno in row] for row in alleles]
 
-    def get_geno_code(row, geno):
-        return [-2 if geno[i] == -1 else alleles[row][geno[i]] 
+    def get_geno_code(row, geno):     
+        # unknown (.) have sample-unique codes; no matching on missingness
+        return [-2 - i if geno[i] == -1 else alleles[row][geno[i]] 
                 for i in range(len(geno))]
 
     orig_gt = vcf['calldata/GT']

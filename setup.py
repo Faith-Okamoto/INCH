@@ -6,9 +6,9 @@ from setuptools import setup, find_packages
 
 # version-keeping code based on pybedtools
 curdir = os.path.abspath(os.path.dirname(__file__))
-MAJ = 2
-MIN = 0
-REV = 0
+MAJ = 1
+MIN = 3
+REV = 2
 VERSION = '%d.%d.%d' % (MAJ, MIN, REV)
 with open(os.path.join(curdir, 'inch/version.py'), 'w') as fout:
         fout.write(
