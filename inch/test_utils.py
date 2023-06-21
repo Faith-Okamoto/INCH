@@ -11,7 +11,7 @@ class TestUtilities:
     SINGLE_CHR_GENO = pd.DataFrame([[1, 4], [2, 3]], columns = SAMPLE_NAMES,
                                    index = pd.Series([1, 2]))
 
-    MULTI_CHR_GENO = {'Y' : pd.DataFrame([[-2, -1]], columns = SAMPLE_NAMES,
+    MULTI_CHR_GENO = {'Y' : pd.DataFrame([[0, -1]], columns = SAMPLE_NAMES,
                                          index = pd.Series([1])),
                       'MT' : pd.DataFrame([[57, 12]], columns = SAMPLE_NAMES,
                                           index = pd.Series([2]))}
@@ -45,8 +45,7 @@ class TestUtilities:
         for chr in ['Y', 'MT']:
             geno_found, chr_found = myutils._get_geno(self.MULTI_FILE, chr)
             correct_geno = self.MULTI_CHR_GENO[chr]
-            assert (geno_found.values == correct_geno.values).all()
-            assert geno_found.columns.equals(correct_geno.columns)
+            assert geno_found.equals(correct_geno)
             assert chr_found == chr
     
     def test_get_geno_nonexist_multi_chr(self):
@@ -160,21 +159,23 @@ class TestAnalysis:
     FAKE_FILE = 'test-files/fake.vcf'
     FOUNDER_GROUPS = [['F1,F2,F3,F4'], ['F1', 'F2', 'F4'], ['F1,F2', 'F3']]
     FOUNDER_BAD_GROUPS = [['F1,F2,F3,F3'], ['F1', 'X', 'F4'], ['F1,F2', 'F1']]
+    IDENTICAL_FOUNDERS = ['F3', 'F4']
 
     FOUNDER_MAX_PCS = {'Y' : 4, 'MT': 3}
-    CORRECT_ID = {'D1': 'F1', 'D2': 'F2', 'D3': 'F3', 'D4': 'F3'}
+    CORRECT_ID = {'D1': 'F1', 'D2': 'F2', 
+                  'D3': IDENTICAL_FOUNDERS, 'D4': IDENTICAL_FOUNDERS}
     
     DESC_IDS = ['D1', 'D2', 'D3', 'D4']
     FOUNDER_IDS = ['F1', 'F2', 'F3', 'F4']
     CORRECT_DESC_DISTS = [
-        ('D1', 'D2', 1), ('D1', 'D3', 0.875), ('D1', 'D4', 0.75),
-        ('D2', 'D3', 0.5), ('D2', 'D4', 0.875), ('D3', 'D4', 0.5)
+        ('D1', 'D2', 1), ('D1', 'D3', 6 / 7), ('D1', 'D4', 5 / 7),
+        ('D2', 'D3', 0.5), ('D2', 'D4', 6 / 7), ('D3', 'D4', 3 / 7)
         ]
     CORRECT_FOUNDER_DISTS = {
-        'Y' : [('F1', 'F2', 1), ('F1', 'F3', 0.5), ('F1', 'F4', 0.625),
-               ('F2', 'F3', 1), ('F2', 'F4', 0.875), ('F3', 'F4', 0.375)],
-        'MT' : [('F1', 'F2', 1), ('F1', 'F3', 2/3), ('F1', 'F4', 2/3),
-               ('F2', 'F3', 2/3), ('F2', 'F4', 2/3), ('F3', 'F4', 1/3)]
+        'Y' : [('F1', 'F2', 1), ('F1', 'F3', 3 / 7), ('F1', 'F4', 0.5),
+               ('F2', 'F3', 1), ('F2', 'F4', 5 / 6), ('F3', 'F4', 1 / 6)],
+        'MT' : [('F1', 'F2', 1), ('F1', 'F3', 0.5), ('F1', 'F4', 0.5),
+               ('F2', 'F3', 0.5), ('F2', 'F4', 0.5), ('F3', 'F4', 0)]
         }
     
     def test_identify_fake_vcf(self):
@@ -220,7 +221,9 @@ class TestAnalysis:
             for chr in ['Y', 'MT']:
                 ids = myutils.identify_founders(f, d, chr, None, None)
                 for i in range(len(ids)):
-                    assert ids[i] == ids.index[i]
+                    if ids.index[i] in self.IDENTICAL_FOUNDERS and chr == 'MT': 
+                        assert ids[i] == 'F3' or ids[i] == 'F4'
+                    else: assert ids[i] == ids.index[i]
     
     def test_identify_identical_multi_chr_groups(self):
         for f, d in product(self.FOUNDER_FILES, repeat = 2):
@@ -228,7 +231,10 @@ class TestAnalysis:
                 for chr in ['Y', 'MT']:
                     ids = myutils.identify_founders(f, d, chr, groups, None)
                     for i in range(len(ids)):
-                        assert ids.index[i] in ids[i]
+                        if (ids.index[i] in self.IDENTICAL_FOUNDERS
+                            and chr == 'MT'): 
+                            assert 'F3' in ids[i] or 'F4' in ids[i]
+                        else: assert ids.index[i] in ids[i]
     
     def test_identify_identical_multi_chr_bad_groups(self):
         for f, d in product(self.FOUNDER_FILES, repeat = 2):
@@ -243,7 +249,8 @@ class TestAnalysis:
             ids = myutils.identify_founders(f_file, self.DESC_FILE, 
                                             'Y', None, None)
             for d, f in self.CORRECT_ID.items():
-                assert ids[d] == f
+                if f == self.IDENTICAL_FOUNDERS: assert ids[d] in f
+                else: assert ids[d] == f
         
     def test_identify_diff_groups(self):
         for f_file in self.FOUNDER_FILES:
@@ -251,7 +258,9 @@ class TestAnalysis:
                 ids = myutils.identify_founders(f_file, self.DESC_FILE, 
                                                 'Y', groups, None)
                 for d, f in self.CORRECT_ID.items():
-                    assert f in ids[d]
+                    if f == self.IDENTICAL_FOUNDERS: 
+                        assert any([id_f in ids[d] for id_f in f])
+                    else: assert f in ids[d]
     
     def test_identify_diff_bad_groups(self):
         for f_file in self.FOUNDER_FILES:
@@ -358,13 +367,13 @@ class TestAnalysis:
             for id in self.DESC_IDS:
                 assert dists.loc[id, id] == 0
             for i, j, d in self.CORRECT_DESC_DISTS:
-                assert dists.loc[i, j] == d
-                assert dists.loc[j, i] == d
+                assert abs(dists.loc[i, j] - d) < 0.01
+                assert abs(dists.loc[j, i] - d) < 0.01
     
     def test_matrix_single_chr_groups(self):
         merged_dists = [
-            ('D1,D2', 'D3', 0.6875), ('D1,D2', 'D4', 0.8125),
-            ('D3', 'D4', 0.5)
+            ('D1,D2', 'D3', 19 / 28), ('D1,D2', 'D4', 5.5 / 7),
+            ('D3', 'D4', 3 / 7)
         ]
         for chr in ['Y', None]:
             dists = myutils.dist_matrix(self.DESC_FILE, chr, ['D1,D2,D3,D4'])
@@ -376,16 +385,16 @@ class TestAnalysis:
             for id in self.DESC_IDS:
                 assert dists.loc[id, id] == 0
             for i, j, d in self.CORRECT_DESC_DISTS:
-                assert dists.loc[i, j] == d
-                assert dists.loc[j, i] == d
+                assert abs(dists.loc[i, j] - d) < 0.01
+                assert abs(dists.loc[j, i] - d) < 0.01
             
             dists = myutils.dist_matrix(self.DESC_FILE, chr, ['D1,D2', 'D3'])
             assert dists.shape == (3, 3)
             for id in ['D1,D2', 'D3', 'D4']:
                 assert dists.loc[id, id] == 0
             for i, j, d in merged_dists:
-                assert dists.loc[i, j] == d
-                assert dists.loc[j, i] == d
+                assert abs(dists.loc[i, j] - d) < 0.01
+                assert abs(dists.loc[j, i] - d) < 0.01
     
     def test_matrix_single_chr_bad_groups(self):
         for groups in [['D1,D2,D3,D3'], ['D1', 'X', 'D4'], ['D1,D2', 'D1']]:
@@ -402,14 +411,14 @@ class TestAnalysis:
                 for id in self.FOUNDER_IDS:
                     assert dists.loc[id, id] == 0
                 for i, j, d in self.CORRECT_FOUNDER_DISTS[chr]:
-                    assert dists.loc[i, j] == d
-                    assert dists.loc[j, i] == d
+                    assert abs(dists.loc[i, j] - d) < 0.01
+                    assert abs(dists.loc[j, i] - d) < 0.01
     
     def test_matrix_multi_chr_groups(self):
-        merged_dists = {'Y' : [('F1,F2', 'F3', 0.75), ('F1,F2', 'F4', 0.75),
-                               ('F3', 'F4', 0.375)],
-                        'MT' : [('F1,F2', 'F3', 2 / 3), ('F1,F2', 'F4', 2 / 3),
-                               ('F3', 'F4', 1 / 3)]}
+        merged_dists = {'Y' : [('F1,F2', 'F3', 5 / 7), ('F1,F2', 'F4', 2 / 3),
+                               ('F3', 'F4', 1 / 6)],
+                        'MT' : [('F1,F2', 'F3', 0.5), ('F1,F2', 'F4', 0.5),
+                               ('F3', 'F4', 0)]}
         for file in self.FOUNDER_FILES:
             for chr in ['Y', 'MT']:
                 dists = myutils.dist_matrix(file, chr, ['F1,F2,F3,F4'])
@@ -421,16 +430,16 @@ class TestAnalysis:
                 for id in self.FOUNDER_IDS:
                     assert dists.loc[id, id] == 0
                 for i, j, d in self.CORRECT_FOUNDER_DISTS[chr]:
-                    assert dists.loc[i, j] == d
-                    assert dists.loc[j, i] == d
+                    assert abs(dists.loc[i, j] - d) < 0.01
+                    assert abs(dists.loc[j, i] - d) < 0.01
                 
                 dists = myutils.dist_matrix(file, chr, ['F1,F2', 'F3'])
                 assert dists.shape == (3, 3)
                 for id in ['F1,F2', 'F3', 'F4']:
                     assert dists.loc[id, id] == 0
                 for i, j, d in merged_dists[chr]:
-                    assert dists.loc[i, j] == d
-                    assert dists.loc[j, i] == d
+                    assert abs(dists.loc[i, j] - d) < 0.01
+                    assert abs(dists.loc[j, i] - d) < 0.01
     
     def test_matrix_multi_chr_bad_groups(self):
         for f_file in self.FOUNDER_FILES:

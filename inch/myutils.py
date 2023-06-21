@@ -19,6 +19,7 @@ import numpy as np
 from sklearn.metrics import pairwise_distances
 # a class to do PCA
 from sklearn.decomposition import PCA
+from scipy.spatial.distance import hamming
 
 # a simple encoding of DNA bases to numbers
 BASES = {'A' : 1, 'C': 2, 'G': 3, 'T': 4}
@@ -170,6 +171,24 @@ def print_df(df: pd.DataFrame, out, round = True,
     if round: df = df.round(decimals = 4)
     df.to_csv(out, sep = '\t', header = header, mode = mode)
 
+def _hamming_ignore_missing(x: list[int], y: list[int]) -> int:
+    """
+    Calculate Hamming distance between genotypes ignoring missing positions
+    Parameters
+    ----------
+    x : list[int]
+        One numeric genotype
+    y : list[int]
+        Another numeric genotype
+    
+    Returns
+	-------
+	dist : int
+        Hamming distance between x and y excluding positions where either is NA
+    """
+    
+    return hamming(x, y, np.where(np.logical_or(x == 0, y == 0), 0, 1))
+
 def _make_groups(founder_ids: set[str], groups: list[str]) -> list[list[str]]:
     """
     Process input groups to create final final groups
@@ -221,7 +240,7 @@ def _geno_dists(row_geno: pd.DataFrame, col_geno: pd.DataFrame) -> pd.DataFrame:
 
     # sklearn requires samples to be rows and features to be columns
     matrix = pairwise_distances(row_geno.transpose(), col_geno.transpose(), 
-                                metric = 'hamming')
+                                metric = _hamming_ignore_missing)
     # label samples before returning the matrix
     return pd.DataFrame(matrix, index = row_geno.columns, 
                         columns = col_geno.columns)
@@ -318,13 +337,12 @@ def _get_geno(file: str, chr: str) -> Tuple[pd.DataFrame, str]:
 
     def get_geno_code(row, geno):     
         # unknown (.) have sample-unique codes; no matching on missingness
-        return [-2 - i if geno[i] == -1 else alleles[row][geno[i]] 
+        return [0 if geno[i] == -1 else alleles[row][geno[i]] 
                 for i in range(len(geno))]
 
     orig_gt = vcf['calldata/GT']
-    processed_gt = np.zeros(orig_gt.shape[0:2], dtype = np.int32)
-    for row in range(orig_gt.shape[0]):
-        processed_gt[row] = get_geno_code(row, orig_gt[row][:, 0])
+    processed_gt = [get_geno_code(row, orig_gt[row][:, 0]) 
+                    for row in range(orig_gt.shape[0])]
 
     return (pd.DataFrame(processed_gt, columns = vcf['samples'], 
                          index = vcf['variants/POS']), vcf['variants/CHROM'][0])
